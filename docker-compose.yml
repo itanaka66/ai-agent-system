@@ -1,0 +1,25 @@
+# docker-compose.yml (Flowise 用)
+version: '3'
+services:
+  flowise:
+    image: flowiseai/flowise:latest
+    container_name: ai-flowise-server
+    restart: unless-stopped
+    ports:
+      - "3001:8080" # WebUI は 3001, API エンドポイントは内部で処理
+    environment:
+      - PORT=8080
+      # Ollama 接続設定 (オーケストレーターと同じネットワーク)
+      - OLLAMA_BASE_URL=http://192.168.0.180:11434,http://192.168.0.251:11434 
+      
+      # Qdrant 接続設定
+      - QDRANT_HOST=http://192.168.0.252:6333
+      
+      # PostgreSQL (ログはオーケストレーター側で担当だが、必要ならここにも設定)
+      - POSTGRES_HOST=192.168.0.151
+      - DATABASE_URL="postgresql://agent_user:secure_password_here@192.168.0.151:5432/ai_agent_db"
+
+      # 認証 (オプション：LAN 内なら無視可だが推奨)
+      - FLOWISE_API_KEY="flowise_secret_key_change_this"
+    volumes:
+      - ~/.flowise:/root/.flowise

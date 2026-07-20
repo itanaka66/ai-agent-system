@@ -1,0 +1,23 @@
+# AI Agent System Dependencies
+fastapi>=0.116
+uvicorn[standard]>=0.35
+sqlalchemy>=2.0.40
+psycopg[binary]>=3.2
+alembic>=1.16
+pydantic>=2.11
+pydantic-settings>=2.10
+python-dotenv>=1.1
+aiohttp>=3.12
+httpx>=0.28
+requests>=2.32
+qdrant-client>=1.18
+ollama>=0.5
+python-jose[cryptography]>=3.5
+passlib[bcrypt]>=1.7
+python-multipart>=0.0.20
+redis>=6.2
+orjson>=3.11
+tenacity>=9.1
+loguru>=0.7
+prometheus-client>=0.22
+openai>=1.99

@@ -1,0 +1,49 @@
+{
+    "name": "Debate Workflow",
+    "description": "A workflow that implements a debate between two agents to generate and critique proposals.",
+    "nodes": [
+        {
+            "id": "start_node",
+            "type": "START_NODE",
+            "position": [20, 100],
+            "outputs": [{"output": "question"}]
+        },
+        {
+            "id": "thinker_proposal",
+            "type": "THINKER_AGENT",
+            "position": [300, 100],
+            "systemPrompt": "あなたは創造的な提案役です。ユーザーの質問に対して、具体的で実用的な解決策を3つ以上提出してください。",
+            "inputs": [{"input": "question"}],
+            "outputs": [{"output": "proposal"}]
+        },
+        {
+            "id": "thinker_critique",
+            "type": "THINKER_AGENT",
+            "position": [600, 100],
+            "systemPrompt": "あなたは厳格な批判者です。プロポーザルに対するリスクや欠点を具体的に指摘してください。",
+            "inputs": [{"input": "proposal"}],
+            "outputs": [{"output": "critique"}]
+        },
+        {
+            "id": "judge_decision",
+            "type": "THINKER_AGENT",
+            "position": [900, 100],
+            "systemPrompt": "あなたは最終的な判断者です。プロポーザルとクリティクの両方を考慮し、最善策を決定してください。",
+            "inputs": [{"input": "proposal"}, {"input": "critique"}],
+            "outputs": [{"output": "final_answer"}]
+        },
+        {
+            "id": "validator",
+            "type": "VALIDATOR_AGENT",
+            "position": [1200, 100],
+            "inputs": [{"input": "question"}, {"input": "final_answer"}],
+            "outputs": [{"output": "validated_answer"}]
+        },
+        {
+            "id": "end_node",
+            "type": "END_NODE",
+            "position": [1500, 100],
+            "inputs": [{"input": "validated_answer"}]
+        }
+    ]
+}

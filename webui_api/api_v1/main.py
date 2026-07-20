@@ -1,0 +1,88 @@
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+
+import os
+from core.orchestrator import Orchestrator
+from utils.metrics import MetricsCollector
+from services.postgres_logger import PostgreSQLLogger
+
+# ロギング設定
+logger = logging.getLogger(__name__)
+
+# .env の読み込み
+load_dotenv()
+
+app = FastAPI(
+    title="AI Agent Orchestrator API",
+    description="Enterprise Multi-Agent AI System with GPU/CPU Cluster",
+    version="1.0.0"
+)
+
+instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+# CORS 設定（必要な場合）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 本番では制限を強化
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("startup")
+async def startup_db_client():
+    """データベース接続初期化"""
+    
+    logger.info("🚀 AI Agent System starting up...")
+    app.state.orchestrator = Orchestrator()
+    app.state.db_logger = PostgreSQLLogger()
+
+metrics_collector = MetricsCollector()
+
+# メインチャットエンドポイント
+@app.post("/api/v1/chat")
+async def chat_endpoint(
+    user_id: str = None,
+    session_id: str = None,
+    query: str = ...,
+    mode: str = "standard"  # standard, debate, simple
+):
+    
+    metrics_collector.increment_request_count("POST", "/api/v1/chat")
+
+    try:
+        logger.info(f"📨 Request received - User: {user_id}, Mode: {mode}")
+        
+        # オーケストレーターで処理
+        result = await app.state.orchestrator.process_request(
+            user_query=query,
+            session_id=session_id or "default_session",
+            mode=mode
+        )
+        
+        metrics_collector.observe_response_time("POST", "/api/v1/chat", result.get("processing_duration"))
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# メインエントリーポイント
+if __name__ == "__main__":
+    
+    import uvicorn
+    
+    print("""
+    ╔════════════════════════════════════════════╗
+    ║         AI Agent Orchestrator v1.0          ║
+    ╚════════════════════════════════════════════╝
+    """)
+    
+    uvicorn.run(
+        "api_v1.main:app", 
+        host="0.0.0.0",
+        port=int(os.getenv("API_PORT", 8000)),
+        reload=True
+    )

@@ -1,0 +1,393 @@
+"""
+Main Orchestration Logic
+Manages task routing, agent coordination, and request processing
+"""
+
+import os
+import asyncio
+from typing import Dict, Optional
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from services.ollama_client import OllamaClient
+from services.qdrant_client import QdrantHandler
+from services.postgres_logger import PostgresLogger
+from core.loop_detector import LoopDetector
+from utils.logger import setup_logger
+from utils.metrics import MetricsCollector
+
+logger = setup_logger(__name__)
+
+
+class Orchestrator:
+    def __init__(self):
+        """Initialize orchestrator with all service connections"""
+        
+        # Ollama Clients
+        self.ollama_master = OllamaClient(os.getenv("OLLAMA_MASTER_URL"))
+        self.ollama_worker = OllamaClient(os.getenv("OLLAMA_WORKER_URL"))
+        
+        # Service Handlers
+        self.qdrant = QdrantHandler()
+        self.db_logger = PostgresLogger()
+        self.loop_detector = LoopDetector(self.db_logger)
+        
+        # Metrics
+        self.metrics = MetricsCollector()
+        
+        # Model Configuration
+        self.model_thinker = os.getenv("MODEL_GPT_THINKER")
+        self.model_executor = os.getenv("MODEL_FAST_EXECUTOR")
+        
+    async def process_request(
+        self, 
+        user_query: str, 
+        session_id: str,
+        mode: str = "standard",
+        user_id: str = None
+    ) -> Dict:
+        """
+        Main request processing pipeline
+        
+        Args:
+            user_query: User's input question
+            session_id: Current conversation session ID
+            mode: Processing mode (standard, debate, simple)
+            user_id: User identifier for logging
+            
+        Returns:
+            Dictionary with answer and metadata
+        """
+        
+        start_time = datetime.now()
+        
+        try:
+            # 1. Generate Session ID if not provided
+            if not session_id:
+                session_id = await self._create_session(user_id)
+                
+            # 2. Loop Detection (Security Check)
+            is_loop, loop_pattern = await self.loop_detector.check_history(
+                session_id, user_query
+            )
+            
+            if is_loop:
+                logger.warning(f"Loop detected for session {session_id}: {loop_pattern}")
+                return {
+                    "answer": self._generate_loop_response(),
+                    "error_type": "loop_detected",
+                    "status_code": 429,
+                    "tokens_used": 0
+                }
+            
+            # 3. Route Task to Appropriate Agent
+            routing_decision = await self._route_task(user_query, mode)
+            
+            # 4. Execute Based on Routing Decision
+            if routing_decision["type"] == "flowise":
+                from services.flowise_client import FlowiseClient
+                result = await self._execute_flowise(
+                    user_query, session_id, routing_decision
+                )
+            else:
+                result = await self._execute_internal_mode(user_query, session_id, mode)
+            
+            # 5. Log to PostgreSQL
+            await self.db_logger.save_message(
+                session_id=session_id,
+                role="assistant",
+                content=result.get("answer", ""),
+                tokens_used=result.get("tokens_used", 0),
+                model_used=self.model_thinker,
+                validation_score=result.get("validation_score")
+            )
+            
+            # 6. Save to Qdrant for Memory (if enabled)
+            if routing_decision.get("save_to_memory", True):
+                await self.qdrant.save_conversation(
+                    session_id=session_id, 
+                    query=user_query, 
+                    answer=result.get("answer", "")
+                )
+            
+            # 7. Record Metrics
+            duration = (datetime.now() - start_time).total_seconds()
+            self.metrics.record_request(
+                mode=mode,
+                success=True,
+                duration=duration,
+                tokens_used=result.get("tokens_used", 0)
+            )
+            
+            return {
+                "answer": result.get("answer"),
+                "status_code": 200,
+                **result
+            }
+            
+        except Exception as e:
+            logger.error(f"Request processing error: {e}")
+            self.metrics.record_request(mode=mode, success=False)
+            
+            return {
+                "answer": "Internal system error occurred. Please try again.",
+                "error_type": "internal_error",
+                "status_code": 500,
+                "tokens_used": 0
+            }
+    
+    async def _execute_internal_mode(
+        self, 
+        query: str, 
+        session_id: str, 
+        mode: str
+    ) -> Dict:
+        """Execute task based on internal processing modes"""
+        
+        if mode == "debate":
+            return await self._debate_flow(query, session_id)
+        elif mode == "simple":
+            return await self._simple_query(query, session_id)
+        else:  # standard
+            return await self._standard_flow(query, session_id)
+    
+    async def _debate_flow(self, query: str, session_id: str) -> Dict:
+        """Multi-agent debate workflow for high-quality answers"""
+        
+        # Retrieve knowledge base context
+        docs = await self.qdrant.search(query, limit=3, score_threshold=0.75)
+        
+        context_text = "\n".join([d.get("content", "")[:500] for d in docs]) if docs else "No relevant context found"
+        
+        # Debater A: Generate Proposal (RTX 3090 - Thinker)
+        proposal_prompt = f"""
+You are a creative problem solver. Provide 3 potential solutions to the user's query.
+For each solution, include pros and cons.
+
+Context from knowledge base: {context_text}
+
+User Query: {query}
+
+Please format your response as JSON with structure:
+{{"proposal": "...", "options": [...], "recommended": "option_number"}}
+"""
+        
+        proposal = await self._call_model(
+            client=self.ollama_master,
+            model=self.model_thinker,
+            prompt=proposal_prompt
+        )
+        
+        # Debater B: Critique Proposal (RTX 3090 - Thinker)
+        critique_prompt = f"""
+You are a critical analyst. Review the following proposal and identify weaknesses,
+risks, and potential improvements.
+
+Original Query: {query}
+Proposal: {proposal[:2000]}
+
+Provide your critique in JSON format with structure:
+{{"critique": "...", "issues": [...], "improvements": [...]}}
+"""
+        
+        critique = await self._call_model(
+            client=self.ollama_master, 
+            model=self.model_thinker,
+            prompt=critique_prompt
+        )
+        
+        # Judge: Final Decision (RTX 3090 - Thinker)
+        judge_prompt = f"""
+You are the final decision maker. Combine the proposal and critique into a single answer.
+
+Query: {query}
+Proposal: {proposal[:2000]}
+Critique: {critique[:2000]}
+
+Generate a final comprehensive answer that addresses all concerns."""
+        
+        final_answer = await self._call_model(
+            client=self.ollama_master,
+            model=self.model_thinker,
+            prompt=judge_prompt
+        )
+        
+        # Validate with lightweight agent (Arc A770)
+        validation = await self._validate_response(final_answer, query)
+        
+        return {
+            "answer": final_answer,
+            "validation_score": validation.get("score"),
+            "need_regen": validation.get("need_regen", False),
+            "tokens_used": 0,
+            "mode": "debate"
+        }
+    
+    async def _standard_flow(self, query: str, session_id: str) -> Dict:
+        """Standard single-pass workflow"""
+        
+        docs = await self.qdrant.search(query, limit=2, score_threshold=0.70)
+        context = "\n".join([d.get("content", "") for d in docs]) if docs else ""
+        
+        prompt = f"""You are a helpful AI assistant. Answer the following query based on your knowledge and the provided context.
+
+Context from knowledge base: {context}
+
+User Query: {query}
+
+Please provide a concise, accurate answer."""
+        
+        answer = await self._call_model(
+            client=self.ollama_master,
+            model=self.model_thinker,
+            prompt=prompt
+        )
+        
+        # Validate with lightweight agent
+        validation = await self._validate_response(answer, query)
+        
+        return {
+            "answer": answer,
+            "validation_score": validation.get("score"),
+            "tokens_used": 0,
+            "mode": "standard"
+        }
+    
+    async def _simple_query(self, query: str, session_id: str) -> Dict:
+        """Simple quick response without RAG"""
+        
+        prompt = f"Answer concisely: {query}"
+        
+        answer = await self._call_model(
+            client=self.ollama_worker,  # Use lighter model for simple queries
+            model=self.model_executor,
+            prompt=prompt
+        )
+        
+        return {
+            "answer": answer,
+            "validation_score": None,
+            "tokens_used": 0,
+            "mode": "simple"
+        }
+    
+    async def _call_model(
+        self, 
+        client: OllamaClient, 
+        model: str, 
+        prompt: str,
+        max_tokens: int = 4096
+    ) -> str:
+        """Unified model calling with error handling"""
+        
+        try:
+            response = await client.generate(
+                model=model,
+                prompt=prompt,
+                max_tokens=max_tokens
+            )
+            
+            if isinstance(response, dict):
+                return response.get("response", "") or str(response)
+            return response
+            
+        except Exception as e:
+            logger.error(f"Model call failed: {e}")
+            raise
+    
+    async def _validate_response(self, answer: str, query: str) -> Dict:
+        """Validate AI response for hallucination"""
+        
+        validation_prompt = f"""
+Check if the following answer makes sense and contains no obvious falsehoods.
+
+Original Query: {query}
+AI Answer: {answer}
+
+Respond in JSON format:
+{{"score": <0-10>, "reason": "<explanation>", "need_regen": <true/false>}}
+
+Scoring: 10 = perfect, 5 = acceptable, 1 = problematic
+"""
+        
+        result = await self._call_model(
+            client=self.ollama_worker,
+            model=self.model_executor,
+            prompt=validation_prompt,
+            max_tokens=500
+        )
+        
+        # Try to parse JSON response
+        try:
+            import json
+            return json.loads(result)
+        except:
+            return {"score": 7.0, "reason": "Parse error", "need_regen": False}
+    
+    async def _execute_flowise(
+        self, 
+        query: str, 
+        session_id: str, 
+        routing_decision: Dict
+    ) -> Dict:
+        """Execute workflow via Flowise"""
+        
+        from services.flowise_client import FlowiseClient
+        
+        flowise = FlowiseClient()
+        result = await flowise.run_workflow(query, session_id)
+        
+        return {
+            "answer": result.get("answer", ""),
+            "source_docs": result.get("source_docs", []),
+            "validation_score": None,  # Flowise handles validation internally
+            "tokens_used": 0,
+            "mode": "flowise"
+        }
+    
+    async def _route_task(self, query: str, mode: str) -> Dict:
+        """Determine which workflow to use based on task complexity"""
+        
+        if mode == "flowise" or (os.getenv("FLOWISE_URL") and mode in ["debate", "standard"]):
+            return {
+                "type": "flowise",
+                "save_to_memory": True,
+                "priority": "high" if mode == "debate" else "normal"
+            }
+        
+        elif mode == "debate":
+            return {"type": "internal_debate", "save_to_memory": True}
+        elif mode == "simple":
+            return {"type": "internal_simple", "save_to_memory": False}
+        else:  # standard
+            return {"type": "internal_standard", "save_to_memory": True}
+    
+    async def _create_session(self, user_id: str = None) -> str:
+        """Create new session in database"""
+        
+        import uuid
+        from datetime import datetime
+        
+        session_id = str(uuid.uuid4())
+        
+        await self.db_logger.create_session(
+            user_id=user_id or "anonymous",
+            session_id=session_id,
+            created_at=datetime.now()
+        )
+        
+        return session_id
+    
+    def _generate_loop_response(self) -> str:
+        """Generate response when loop is detected"""
+        
+        responses = [
+            "I notice we're repeating similar topics. Let's explore a different direction.",
+            "This seems to be going in circles. Shall I summarize what we've discussed?",
+            "We've covered this topic extensively. Would you like suggestions for new areas?"
+        ]
+        
+        import random
+        return random.choice(responses)

@@ -1,0 +1,19 @@
+{
+    "model_map": [
+        {
+            "complexity_level": 1,
+            "model_name": "phi3:mini",
+            "description": "適切な回答を生成するための基本的なモデル"
+        },
+        {
+            "complexity_level": 2,
+            "model_name": "llama3:8b",
+            "description": "より高度な論理や情報検索を可能にする軽量モデル"
+        },
+        {
+            "complexity_level": 3,
+            "model_name": "qwen2.5:32b",
+            "description": "複雑な問題解決と創造的な提案を行うための強力なモデル"
+        }
+    ]
+}
