@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 
 from services.ollama_client import OllamaClient
 from services import agent_config_store
+from services import node_pool
 from utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -25,6 +26,12 @@ class WorkflowExecutionError(Exception):
 
 
 def _client_for_target(target: str) -> OllamaClient:
+    if target == "cpu_cluster":
+        node_url = node_pool.next_cpu_node()
+        if not node_url:
+            raise WorkflowExecutionError("target 'cpu_cluster' requested but OLLAMA_CPU_NODES is not configured")
+        return OllamaClient(node_url)
+
     url = os.getenv("OLLAMA_WORKER_URL") if target == "gpu_worker" else os.getenv("OLLAMA_MASTER_URL")
     if not url:
         raise WorkflowExecutionError(f"No Ollama endpoint configured for target '{target}'")

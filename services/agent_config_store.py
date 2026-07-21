@@ -18,7 +18,7 @@ MODEL_MAP_PATH = CONFIG_DIR / "model_map.json"
 _lock = threading.Lock()
 
 VALID_ROLES = {"thinker", "validator", "executor"}
-VALID_TARGETS = {"gpu_master", "gpu_worker"}
+VALID_TARGETS = {"gpu_master", "gpu_worker", "cpu_cluster"}
 
 EDITABLE_FIELDS = {
     "display_name", "role", "target", "model",

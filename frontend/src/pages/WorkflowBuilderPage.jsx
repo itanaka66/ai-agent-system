@@ -5,6 +5,12 @@ import 'reactflow/dist/style.css'
 import { api } from '../api/client.js'
 
 const RUNNABLE_TYPES = ['THINKER_AGENT', 'VALIDATOR_AGENT', 'EXECUTOR_AGENT']
+const TARGETS = ['gpu_master', 'gpu_worker', 'cpu_cluster']
+const TARGET_LABEL = {
+  gpu_master: 'RTX 3090 (master)',
+  gpu_worker: 'Intel Arc A770 (worker)',
+  cpu_cluster: 'CPU クラスター',
+}
 
 const TYPE_COLOR = {
   START_NODE: '#2f9e5b',
@@ -78,6 +84,8 @@ export default function WorkflowBuilderPage() {
             outputs: n.outputs || [],
             systemPrompt: n.systemPrompt || '',
             agentKey: n.agentKey,
+            target: n.target,
+            model: n.model,
           }
         }
         setNodeData(dataMap)
@@ -172,6 +180,8 @@ export default function WorkflowBuilderPage() {
         }
         if (nd.systemPrompt) node.systemPrompt = nd.systemPrompt
         if (nd.agentKey) node.agentKey = nd.agentKey
+        if (nd.target) node.target = nd.target
+        if (nd.model) node.model = nd.model
         return node
       })
       await api.saveWorkflow(name, { name, description, nodes: payloadNodes })
@@ -290,6 +300,28 @@ export default function WorkflowBuilderPage() {
                     <textarea
                       value={selectedNode.systemPrompt || ''}
                       onChange={(e) => patchNodeData(selectedNodeId, { systemPrompt: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label>実行先ノード（個別指定、未指定時は継承元 or 既定値）</label>
+                    <select
+                      value={selectedNode.target || ''}
+                      onChange={(e) => patchNodeData(selectedNodeId, { target: e.target.value || undefined })}
+                    >
+                      <option value="">（継承 / 既定値）</option>
+                      {TARGETS.map((t) => (
+                        <option key={t} value={t}>{TARGET_LABEL[t]}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field">
+                    <label>モデル（個別指定、任意）</label>
+                    <input
+                      value={selectedNode.model || ''}
+                      onChange={(e) => patchNodeData(selectedNodeId, { model: e.target.value || undefined })}
+                      placeholder="例: llama3:8b（未指定時は継承元 or 既定値）"
                     />
                   </div>
                 </>

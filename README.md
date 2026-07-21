@@ -115,7 +115,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 Ollama endpoint | ✅ Yes |
 | `OLLAMA_WORKER_URL` | Intel Arc A770 Ollama endpoint | ✅ Yes |
-| `OLLAMA_CPU_NODES` | CPU cluster nodes (comma-separated) | ⚠️ Optional |
+| `OLLAMA_CPU_NODES` | CPU cluster nodes (comma-separated). Selectable as target `cpu_cluster` (round-robin) in Agent Console / Workflow Builder | ⚠️ Optional |
 | `POSTGRES_HOST/PORT/USER/PASSWORD` | PostgreSQL connection | ✅ Yes |
 | `QDRANT_HOST` | Vector database URL | ✅ Yes |
 
@@ -223,7 +223,7 @@ npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへ
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 の Ollama エンドポイント | ✅ 必要 |
 | `OLLAMA_WORKER_URL` | Intel Arc A770 の Ollama エンドポイント | ✅ 必要 |
-| `OLLAMA_CPU_NODES` | CPU クラスターノード（カンマ区切り） | ⚠️ 任意 |
+| `OLLAMA_CPU_NODES` | CPU クラスターノード（カンマ区切り）。Agent Console / ワークフロービルダーで実行先「cpu_cluster」としてラウンドロビン選択可能 | ⚠️ 任意 |
 | `POSTGRES_HOST/PORT/USER/PASSWORD` | PostgreSQL 接続情報 | ✅ 必要 |
 | `QDRANT_HOST` | ベクトルデータベースの URL | ✅ 必要 |
 
