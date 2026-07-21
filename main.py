@@ -17,7 +17,7 @@ def main():
     print(f"🚀 Starting AI Agent Orchestrator on {host}:{port}")
     
     uvicorn.run(
-        "webui_api.main:app",
+        "api_v1.main:app",
         host=host,
         port=port,
         reload=True,

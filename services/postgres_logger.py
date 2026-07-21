@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any
 import psycopg2
 
-class PostgreSQLLogger:
+class PostgresLogger:
     """PostgreSQL Database のロギング用クラス"""
     
     def __init__(self):

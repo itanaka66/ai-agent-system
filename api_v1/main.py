@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import os
+from dotenv import load_dotenv 
+import logging
 from core.orchestrator import Orchestrator
 from utils.metrics import MetricsCollector
-from services.postgres_logger import PostgreSQLLogger
+from services.postgres_logger import PostgresLogger
 
 # ロギング設定
 logger = logging.getLogger(__name__)
@@ -19,6 +21,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# instrumentator = Instrumentator()
 instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # CORS 設定（必要な場合）
@@ -36,7 +39,7 @@ async def startup_db_client():
     
     logger.info("🚀 AI Agent System starting up...")
     app.state.orchestrator = Orchestrator()
-    app.state.db_logger = PostgreSQLLogger()
+    app.state.db_logger = PostgresLogger()
 
 metrics_collector = MetricsCollector()
 

@@ -1,22 +1,26 @@
-import os
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Histogram, CollectorRegistry
 
 class MetricsCollector:
     """Prometheus メトリクスのコレクション用クラス"""
     
     def __init__(self):
+        self.registry = CollectorRegistry(auto_describe=True)
+        
+        # Ensure unique metric names and labels
         self.request_counter = Counter(
             'api_requests_total', 
             'Total number of API requests',
-            ['method', 'endpoint']
+            ['method', 'endpoint'],
+            registry=self.registry
         )
         
         self.response_time_histogram = Histogram(
             'response_duration_seconds', 
             'Request response duration in seconds',
-            ['method', 'endpoint']
+            ['method', 'endpoint'],
+            registry=self.registry
         )
-    
+
     def increment_request_count(self, method: str, endpoint: str):
         """リクエスト数をインクリメントする"""
         
