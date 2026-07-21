@@ -93,6 +93,22 @@ curl http://localhost:8000/api/v1/chat \
   -d '{"user_id": "user123", "session_id": "", "query": "Your question here", "mode": "debate"}'
 ```
 
+## Web UI: Graphical Agent Customization
+A React SPA under `frontend/` lets you customize agents from the browser instead of editing files by hand.
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173 (proxies /api to the backend on :8000)
+```
+
+- **エージェント設定 (Agent Settings)** — edit each pipeline stage's model, system prompt, temperature and max tokens. Changes apply to the next `/api/v1/chat` request immediately (no restart).
+- **ワークフロービルダー (Workflow Builder)** — drag agent nodes onto a canvas, wire them together via named input/output variables, and test-run the graph. Workflows are stored as `configs/workflow_configs/*.json`.
+
+Backed by new REST endpoints: `GET/POST/PUT/DELETE /api/v1/agents`, `GET /api/v1/agents/models`, and `GET/PUT/DELETE /api/v1/workflows`, `POST /api/v1/workflows/{name}/run`.
+
+The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be used side-by-side.
+
 ## Environment Variables
   | Variable | Description | Required |
 |----------|-------------|----------|
@@ -185,6 +201,20 @@ curl http://localhost:8000/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{"user_id": "user123", "session_id": "", "query": "ここに関心のある質問", "mode": "debate"}'
 ```
+
+## Web UI：エージェントのグラフィカルなカスタマイズ
+`frontend/` 以下に React 製の SPA があり、ブラウザからエージェントを設定できます。
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへプロキシ）
+```
+
+- **エージェント設定** — 各パイプライン段階（提案／批評／判定／検証／標準応答／高速実行）のモデル・システムプロンプト・temperature・max_tokens を編集できます。保存すると再起動なしで次回のチャットリクエストから反映されます。
+- **ワークフロービルダー** — キャンバス上にエージェントノードをドラッグ配置し、入出力変数名でデータフローを設計、テスト実行できます。ワークフローは `configs/workflow_configs/*.json` に保存されます。
+
+これらは新規追加した REST API（`/api/v1/agents`、`/api/v1/agents/models`、`/api/v1/workflows`、`/api/v1/workflows/{name}/run`）に対応しています。既存の Flowise 連携（`FLOWISE_URL`）はそのまま併用可能です。
 
 ## 環境変数
 | 変数名 | 説明 | 必須 |

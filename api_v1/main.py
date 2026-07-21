@@ -8,6 +8,8 @@ import logging
 from core.orchestrator import Orchestrator
 from utils.metrics import MetricsCollector
 from services.postgres_logger import PostgresLogger
+from api_v1 import agents as agents_router
+from api_v1 import workflows as workflows_router
 
 # ロギング設定
 logger = logging.getLogger(__name__)
@@ -32,6 +34,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# エージェント設定 / ワークフロービルダー用 API（Web UI からのグラフィカルなカスタマイズ用）
+app.include_router(agents_router.router, prefix="/api/v1")
+app.include_router(workflows_router.router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_db_client():
