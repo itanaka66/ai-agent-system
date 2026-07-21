@@ -28,13 +28,14 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
 | ⚠️ Loop Detection | History analysis prevents infinite conversation loops |
 | 📊 Monitoring | Prometheus + Grafana for system observability |
 | 🎨 Workflow Customization | Flowise integration for visual workflow design |
+| 🖥️ Agent Console | Built-in web UI (`frontend/`) to graphically edit agent prompts/models and build agent workflows, no file editing required |
 
 ### Architecture
 
 ```bash
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ WebUI       │────▶│ Orchestrator│────▶│ RTX 3090    │
-│             │     │ (API Server)│     │ (Thinker)   │
+│   WebUI /   │────▶│ Orchestrator│────▶│ RTX 3090    │
+│   Console   │     │ (API Server)│     │ (Thinker)   │
 └─────────────┘     └─────────────┘     └─────────────┘
                             │                   ▲
                             ▼                   │
@@ -141,13 +142,14 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 | ⚠️ ループ検出 | 履歴分析により無限会話を防ぐ |
 | 📊 モニタリング | Prometheus + Grafana で可視化 |
 | 🎨 ワークフローカスタマイズ | Flowise 統合で視覚的デザイン可能 |
+| 🖥️ エージェントコンソール | 標準搭載の Web UI（`frontend/`）でエージェントのプロンプト・モデルやワークフローをファイル編集なしにグラフィカルに設定可能 |
 
 ## アーキテクチャ
 
 ```bash
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ WebUI       │────▶│ オーケストレーター │     │ RTX 3090    │
-│             │     │ (API サーバー)   │     │ (思考者)    │
+│  WebUI /    │────▶│ オーケストレーター │     │ RTX 3090    │
+│  コンソール   │     │ (API サーバー)   │     │ (思考者)    │
 └─────────────┘     └─────────────┘     └─────────────┘
                             │                   ▲
                             ▼                   │
