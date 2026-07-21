@@ -18,6 +18,7 @@ from core.loop_detector import LoopDetector
 from utils.logger import setup_logger
 from utils.metrics import MetricsCollector
 from services import agent_config_store
+from services import node_pool
 
 logger = setup_logger(__name__)
 
@@ -209,6 +210,13 @@ class Orchestrator:
         return stored
 
     def _client_for_target(self, target: str) -> OllamaClient:
+        if target == "cpu_cluster":
+            node_url = node_pool.next_cpu_node()
+            if node_url:
+                return OllamaClient(node_url)
+            logger.warning("target 'cpu_cluster' requested but OLLAMA_CPU_NODES is not configured; falling back to gpu_worker")
+            return self.ollama_worker
+
         return self.ollama_worker if target == "gpu_worker" else self.ollama_master
 
     async def _run_stage(self, key: str, dynamic_prompt: str) -> str:

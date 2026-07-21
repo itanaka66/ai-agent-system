@@ -32,4 +32,7 @@ export const api = {
   saveWorkflow: (name, data) => request(`/workflows/${name}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteWorkflow: (name) => request(`/workflows/${name}`, { method: 'DELETE' }),
   runWorkflow: (name, query) => request(`/workflows/${name}/run`, { method: 'POST', body: JSON.stringify({ query }) }),
+
+  // Nodes
+  listNodes: () => request('/nodes'),
 }

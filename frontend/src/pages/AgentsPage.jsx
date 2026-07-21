@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client.js'
+import NodeStatus from '../components/NodeStatus.jsx'
 
 const ROLES = ['thinker', 'validator', 'executor']
-const TARGETS = ['gpu_master', 'gpu_worker']
+const TARGETS = ['gpu_master', 'gpu_worker', 'cpu_cluster']
+const TARGET_LABEL = {
+  gpu_master: 'RTX 3090 (master)',
+  gpu_worker: 'Intel Arc A770 (worker)',
+  cpu_cluster: 'CPU クラスター',
+}
 
 const emptyDraft = {
   key: '',
@@ -110,6 +116,8 @@ export default function AgentsPage() {
       {error && <div className="banner-error">{error}</div>}
       {message && <div className="banner-success">{message}</div>}
 
+      <NodeStatus />
+
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginTop: 16 }}>
         <div style={{ flex: '0 0 280px' }}>
           <div className="card" style={{ marginBottom: 12 }}>
@@ -135,7 +143,7 @@ export default function AgentsPage() {
               >
                 <strong>{a.display_name || a.key}</strong>
                 <div style={{ fontSize: 12 }}>
-                  <code>{a.key}</code> · {a.role} · {a.model}
+                  <code>{a.key}</code> · {a.role} · {a.model} · {TARGET_LABEL[a.target] || a.target}
                   {!a.enabled && ' · 無効'}
                 </div>
               </div>
@@ -173,7 +181,7 @@ export default function AgentsPage() {
                   <label>実行先ノード</label>
                   <select value={draft.target} onChange={(e) => updateDraft('target', e.target.value)}>
                     {TARGETS.map((t) => (
-                      <option key={t} value={t}>{t === 'gpu_master' ? 'RTX 3090 (master)' : 'Intel Arc A770 (worker)'}</option>
+                      <option key={t} value={t}>{TARGET_LABEL[t]}</option>
                     ))}
                   </select>
                 </div>
