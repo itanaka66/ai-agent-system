@@ -5,14 +5,18 @@ class OllamaClient:
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip('/')
     
-    async def generate(self, model: str, prompt: str, max_tokens: int = 4096) -> str:
+    async def generate(self, model: str, prompt: str, max_tokens: int = 4096, temperature: Optional[float] = None) -> str:
         """Generate response from Ollama"""
-        
+
+        options = {"num_ctx": max_tokens}
+        if temperature is not None:
+            options["temperature"] = temperature
+
         payload = {
             "model": model,
             "prompt": prompt,
             "stream": False,
-            "options": {"num_ctx": max_tokens}
+            "options": options
         }
         
         try:

@@ -1,0 +1,70 @@
+{
+  "agents": [
+    {
+      "key": "standard_answer",
+      "display_name": "標準応答エージェント",
+      "role": "thinker",
+      "target": "gpu_master",
+      "model": "qwen2.5:32b",
+      "temperature": 0.7,
+      "max_tokens": 4096,
+      "enabled": true,
+      "system_prompt": "You are a helpful AI assistant. Answer the following query based on your knowledge and the provided context. Please provide a concise, accurate answer."
+    },
+    {
+      "key": "thinker_proposal",
+      "display_name": "提案エージェント (Debate)",
+      "role": "thinker",
+      "target": "gpu_master",
+      "model": "qwen2.5:32b",
+      "temperature": 0.8,
+      "max_tokens": 4096,
+      "enabled": true,
+      "system_prompt": "You are a creative problem solver. Provide 3 potential solutions to the user's query. For each solution, include pros and cons. Please format your response as JSON with structure: {\"proposal\": \"...\", \"options\": [...], \"recommended\": \"option_number\"}"
+    },
+    {
+      "key": "thinker_critique",
+      "display_name": "批評エージェント (Debate)",
+      "role": "thinker",
+      "target": "gpu_master",
+      "model": "qwen2.5:32b",
+      "temperature": 0.6,
+      "max_tokens": 4096,
+      "enabled": true,
+      "system_prompt": "You are a critical analyst. Review the following proposal and identify weaknesses, risks, and potential improvements. Provide your critique in JSON format with structure: {\"critique\": \"...\", \"issues\": [...], \"improvements\": [...]}"
+    },
+    {
+      "key": "judge_decision",
+      "display_name": "審判エージェント (Debate)",
+      "role": "thinker",
+      "target": "gpu_master",
+      "model": "qwen2.5:32b",
+      "temperature": 0.5,
+      "max_tokens": 4096,
+      "enabled": true,
+      "system_prompt": "You are the final decision maker. Combine the proposal and critique into a single answer. Generate a final comprehensive answer that addresses all concerns."
+    },
+    {
+      "key": "validator",
+      "display_name": "検証エージェント",
+      "role": "validator",
+      "target": "gpu_worker",
+      "model": "llama3:8b",
+      "temperature": 0.2,
+      "max_tokens": 500,
+      "enabled": true,
+      "system_prompt": "Check if the following answer makes sense and contains no obvious falsehoods. Respond in JSON format: {\"score\": <0-10>, \"reason\": \"<explanation>\", \"need_regen\": <true/false>}. Scoring: 10 = perfect, 5 = acceptable, 1 = problematic"
+    },
+    {
+      "key": "executor_simple",
+      "display_name": "高速実行エージェント",
+      "role": "executor",
+      "target": "gpu_worker",
+      "model": "llama3:8b",
+      "temperature": 0.7,
+      "max_tokens": 1024,
+      "enabled": true,
+      "system_prompt": "Answer concisely."
+    }
+  ]
+}
