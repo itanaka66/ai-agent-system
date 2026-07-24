@@ -18,7 +18,7 @@
 This is an enterprise-grade AI agent system designed to leverage heterogeneous hardware resources:
 - **RTX 3090 (24GB VRAM):** Complex reasoning, debate generation, decision making
 - **Intel Arc A770 (16GB VRAM):** Fast execution, ComfyUI integration, validation
-- **CPU Cluster (10 nodes):** Load distribution, embedding tasks, fallback processing
+- **CPU Cluster (3 nodes):** Load distribution, embedding tasks, fallback processing
 
 ### Key Features
 | Feature | Description |
@@ -41,7 +41,7 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
                             ▼                   │
                     ┌─────────────┐     ┌─────────────┐
                     │ CPU Cluster │◀───▶│ Intel Arc   │
-                    │ (10 nodes)  │     │ A770        │
+                    │ (3 nodes)   │     │ A770        │
                     └─────────────┘     └─────────────┘
                             ▲                   │
                             ▼                   ▼
@@ -138,7 +138,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 
 * RTX 3090（VRAM 24GB）：複雑な推論、ディベート生成、意思決定
 * Intel Arc A770（VRAM 16GB）：高速実行、ComfyUI 連携、検証
-* CPU クラスター（10 ノード）：負荷分散、埋め込みタスク、フォールバック処理
+* CPU クラスター（3 ノード）：負荷分散、埋め込みタスク、フォールバック処理
 
 ## 主要機能
 | 機能 | 説明 |
@@ -161,7 +161,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
                             ▼                   │
                     ┌─────────────┐     ┌─────────────┐
                     │ CPU クラスター│◀───▶│ Intel Arc   │
-                    │ (10 ノード)    │     │ A770        │
+                    │ (3 ノード)     │     │ A770        │
                     └─────────────┘     └─────────────┘
                             ▲                   │
                             ▼                   ▼
