@@ -18,7 +18,7 @@
 This is an enterprise-grade AI agent system designed to leverage heterogeneous hardware resources:
 - **RTX 3090 (24GB VRAM):** Complex reasoning, debate generation, decision making
 - **Intel Arc A770 (16GB VRAM):** Fast execution, ComfyUI integration, validation
-- **CPU Cluster (10 nodes):** Load distribution, embedding tasks, fallback processing
+- **CPU Cluster (3 nodes):** Load distribution, embedding tasks, fallback processing
 
 ### Key Features
 | Feature | Description |
@@ -41,7 +41,7 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
                             ▼                   │
                     ┌─────────────┐     ┌─────────────┐
                     │ CPU Cluster │◀───▶│ Intel Arc   │
-                    │ (10 nodes)  │     │ A770        │
+                    │ (3 nodes)   │     │ A770        │
                     └─────────────┘     └─────────────┘
                             ▲                   │
                             ▼                   ▼
@@ -73,8 +73,8 @@ ollama pull qwen2.5:32b-q4_K_M
 ollama pull llama3:8b
 ollama pull phi3:mini
 
-# Start the orchestrator
-python main.py --host 0.0.0.0 --port 8000
+# Start the orchestrator (host/port come from SERVICE_HOST / SERVICE_PORT in .env, default 0.0.0.0:8000)
+python main.py
 
 # Optional: Start Flowise for workflow customization
 docker run -p 3001:8080 flowiseai/flowise
@@ -82,16 +82,14 @@ docker run -p 3001:8080 flowiseai/flowise
 
 ## Usage
 
+`POST /api/v1/chat` takes its arguments as query parameters (not a JSON body).
+
+```bash
 # Basic chat request
-``` bash
-curl http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123", "session_id": "", "query": "Hello!", "mode": "standard"}'
+curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&query=Hello!&mode=standard"
 
 # Debate mode (higher accuracy)
-curl http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123", "session_id": "", "query": "Your question here", "mode": "debate"}'
+curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&query=Your%20question%20here&mode=debate"
 ```
 
 ## Web UI: Graphical Agent Customization
@@ -111,13 +109,21 @@ Backed by new REST endpoints: `GET/POST/PUT/DELETE /api/v1/agents`, `GET /api/v1
 The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be used side-by-side.
 
 ## Environment Variables
-  | Variable | Description | Required |
+| Variable | Description | Required |
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 Ollama endpoint | ✅ Yes |
 | `OLLAMA_WORKER_URL` | Intel Arc A770 Ollama endpoint | ✅ Yes |
+| `MODEL_GPT_THINKER` | Default model for thinker/debate stages (RTX 3090) | ✅ Yes |
+| `MODEL_FAST_EXECUTOR` | Default model for validator/executor stages (Arc A770) | ✅ Yes |
 | `OLLAMA_CPU_NODES` | CPU cluster nodes (comma-separated). Selectable as target `cpu_cluster` (round-robin) in Agent Console / Workflow Builder | ⚠️ Optional |
-| `POSTGRES_HOST/PORT/USER/PASSWORD` | PostgreSQL connection | ✅ Yes |
-| `QDRANT_HOST` | Vector database URL | ✅ Yes |
+| `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL connection | ✅ Yes |
+| `QDRANT_HOST` / `QDRANT_API_KEY` | Vector database URL / API key | ✅ Yes |
+| `QDRANT_COLLECTION_CORPUS/HISTORY` | Qdrant collection names | ⚠️ Optional |
+| `PROMETHEUS_URL` / `GRAFANA_URL` | Monitoring dashboards | ⚠️ Optional |
+| `FLOWISE_URL/FLOWISE_FLOW_ID/FLOWISE_API_KEY` | Flowise workflow integration | ⚠️ Optional |
+| `SERVICE_HOST` / `SERVICE_PORT` | Orchestrator bind address/port (default `0.0.0.0:8000`) | ⚠️ Optional |
+| `SECRET_KEY` / `API_TOKEN` | App secret / API auth token | ✅ Yes |
+| `LOG_LEVEL` | Logging verbosity | ⚠️ Optional |
 
 ## Hardware Requirements
 | Component | RTX 3090 | Intel Arc A770 | CPU Node (per) |
@@ -132,7 +138,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 
 * RTX 3090（VRAM 24GB）：複雑な推論、ディベート生成、意思決定
 * Intel Arc A770（VRAM 16GB）：高速実行、ComfyUI 連携、検証
-* CPU クラスター（10 ノード）：負荷分散、埋め込みタスク、フォールバック処理
+* CPU クラスター（3 ノード）：負荷分散、埋め込みタスク、フォールバック処理
 
 ## 主要機能
 | 機能 | 説明 |
@@ -155,7 +161,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
                             ▼                   │
                     ┌─────────────┐     ┌─────────────┐
                     │ CPU クラスター│◀───▶│ Intel Arc   │
-                    │ (10 ノード)    │     │ A770        │
+                    │ (3 ノード)     │     │ A770        │
                     └─────────────┘     └─────────────┘
                             ▲                   │
                             ▼                   ▼
@@ -186,22 +192,22 @@ ollama pull qwen2.5:32b-q4_K_M
 ollama pull llama3:8b
 ollama pull phi3:mini
 
-# オーケストレーター起動
-python main.py --host 0.0.0.0 --port 8000
+# オーケストレーター起動（ホスト/ポートは .env の SERVICE_HOST / SERVICE_PORT で指定、既定値 0.0.0.0:8000）
+python main.py
 
 # オプション：Flowise を起動してワークフローをカスタマイズ可能に
 docker run -p 3001:8080 flowiseai/flowise
+```
 
 ## 使用方法
+`POST /api/v1/chat` はクエリパラメータで引数を受け取ります（JSON ボディではありません）。
+
+```bash
 # 基本的なチャットリクエスト
-curl http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123", "session_id": "", "query": "こんにちは！", "mode": "standard"}'
+curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&query=こんにちは！&mode=standard"
 
 # ディベートモード（高精度）
-curl http://localhost:8000/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "user123", "session_id": "", "query": "ここに関心のある質問", "mode": "debate"}'
+curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&query=ここに関心のある質問&mode=debate"
 ```
 
 ## Web UI：エージェントのグラフィカルなカスタマイズ
@@ -223,9 +229,17 @@ npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへ
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 の Ollama エンドポイント | ✅ 必要 |
 | `OLLAMA_WORKER_URL` | Intel Arc A770 の Ollama エンドポイント | ✅ 必要 |
+| `MODEL_GPT_THINKER` | Thinker/ディベート段階の既定モデル（RTX 3090） | ✅ 必要 |
+| `MODEL_FAST_EXECUTOR` | Validator/Executor 段階の既定モデル（Arc A770） | ✅ 必要 |
 | `OLLAMA_CPU_NODES` | CPU クラスターノード（カンマ区切り）。Agent Console / ワークフロービルダーで実行先「cpu_cluster」としてラウンドロビン選択可能 | ⚠️ 任意 |
-| `POSTGRES_HOST/PORT/USER/PASSWORD` | PostgreSQL 接続情報 | ✅ 必要 |
-| `QDRANT_HOST` | ベクトルデータベースの URL | ✅ 必要 |
+| `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL 接続情報 | ✅ 必要 |
+| `QDRANT_HOST` / `QDRANT_API_KEY` | ベクトルデータベースの URL / API キー | ✅ 必要 |
+| `QDRANT_COLLECTION_CORPUS/HISTORY` | Qdrant コレクション名 | ⚠️ 任意 |
+| `PROMETHEUS_URL` / `GRAFANA_URL` | モニタリングダッシュボード | ⚠️ 任意 |
+| `FLOWISE_URL/FLOWISE_FLOW_ID/FLOWISE_API_KEY` | Flowise ワークフロー連携 | ⚠️ 任意 |
+| `SERVICE_HOST` / `SERVICE_PORT` | オーケストレーターの待受アドレス/ポート（既定 `0.0.0.0:8000`） | ⚠️ 任意 |
+| `SECRET_KEY` / `API_TOKEN` | アプリシークレット / API 認証トークン | ✅ 必要 |
+| `LOG_LEVEL` | ログ出力レベル | ⚠️ 任意 |
 
 ## ハードウェア要件
 | コンポーネント | RTX 3090 | Intel Arc A770 | CPU ノード（1 台あたり） |
