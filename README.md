@@ -2,6 +2,8 @@
 
 <div align="center">
 
+[![CI](https://github.com/itanaka66/ai-agent-system/actions/workflows/ci.yml/badge.svg)](https://github.com/itanaka66/ai-agent-system/actions/workflows/ci.yml)
+
 **A Multi-Agent AI System with RTX 3090 + Intel Arc A770 + CPU Cluster**
 
 **RTX 3090 と Intel Arc A770 および CPU クラスターを備えたマルチエージェント AI システム**
