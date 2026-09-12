@@ -1,25 +1,89 @@
-# docker-compose.yml (Flowise 用)
-version: '3'
+# docker-compose.yml
+#
+# Optional backing services for local/dev use. Each service is tagged with a
+# Compose profile of the same name so you can choose which ones to start from
+# the CLI instead of always starting everything:
+#
+#   docker compose --profile qdrant --profile postgres up -d
+#
+# Or use ./install.sh for an interactive/flag-driven picker (./install.sh -h).
+# In production these typically run on dedicated hardware nodes instead (see
+# README "Hardware Requirements") - this file is for convenience, not the only
+# way to run them.
+
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ai-qdrant
+    restart: unless-stopped
+    profiles: ["qdrant"]
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-}
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  postgres:
+    image: postgres:16
+    container_name: ai-postgres
+    restart: unless-stopped
+    profiles: ["postgres"]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-agent_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dev_password}
+      - POSTGRES_DB=${POSTGRES_DB:-ai_agent_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Runs automatically on first container creation (empty data dir only)
+      - ./tools/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-ollama
+    restart: unless-stopped
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Uncomment to pass an NVIDIA GPU through (requires the NVIDIA Container Toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
   flowise:
     image: flowiseai/flowise:latest
     container_name: ai-flowise-server
     restart: unless-stopped
+    profiles: ["flowise"]
     ports:
       - "3001:8080" # WebUI は 3001, API エンドポイントは内部で処理
     environment:
       - PORT=8080
-      # Ollama 接続設定 (オーケストレーターと同じネットワーク)
-      - OLLAMA_BASE_URL=http://192.168.0.180:11434,http://192.168.0.251:11434 
-      
+      # Ollama 接続設定 (.env の OLLAMA_MASTER_URL / OLLAMA_WORKER_URL を利用)
+      - OLLAMA_BASE_URL=${OLLAMA_MASTER_URL:-http://ollama:11434},${OLLAMA_WORKER_URL:-}
+
       # Qdrant 接続設定
-      - QDRANT_HOST=http://192.168.0.252:6333
-      
+      - QDRANT_HOST=${QDRANT_HOST:-http://qdrant:6333}
+
       # PostgreSQL (ログはオーケストレーター側で担当だが、必要ならここにも設定)
-      - POSTGRES_HOST=192.168.0.151
-      - DATABASE_URL="postgresql://agent_user:secure_password_here@192.168.0.151:5432/ai_agent_db"
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-agent_user}:${POSTGRES_PASSWORD:-dev_password}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-ai_agent_db}
 
       # 認証 (オプション：LAN 内なら無視可だが推奨)
-      - FLOWISE_API_KEY="flowise_secret_key_change_this"
+      - FLOWISE_API_KEY=${FLOWISE_API_KEY:-}
     volumes:
       - ~/.flowise:/root/.flowise
+
+volumes:
+  qdrant_data:
+  postgres_data:
+  ollama_data:

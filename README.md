@@ -82,6 +82,21 @@ python main.py
 docker run -p 3001:8080 flowiseai/flowise
 ```
 
+### Optional: Run Qdrant / PostgreSQL / Ollama / Flowise via Docker
+If you don't already have these running on dedicated hardware, `docker-compose.yml` can start any combination of them locally. Each service is behind a Compose [profile](https://docs.docker.com/compose/how-tos/profiles/) of the same name, selectable from the CLI:
+
+```bash
+# Interactive picker (prompts y/N for each service)
+./install.sh
+
+# Or select explicitly via flags
+./install.sh --qdrant --postgres --ollama --flowise
+./install.sh --all
+
+# Equivalent raw docker compose invocation
+docker compose --profile qdrant --profile postgres up -d
+```
+
 ## Usage
 
 `POST /api/v1/chat` takes its arguments as query parameters (not a JSON body).
@@ -200,6 +215,21 @@ python main.py
 
 # オプション：Flowise を起動してワークフローをカスタマイズ可能に
 docker run -p 3001:8080 flowiseai/flowise
+```
+
+### オプション：Qdrant / PostgreSQL / Ollama / Flowise を Docker で起動
+専用ハードウェアで稼働させていない場合、`docker-compose.yml` でこれらをローカルに起動できます。各サービスは同名の Compose [プロファイル](https://docs.docker.com/compose/how-tos/profiles/) に紐づいており、CLI から起動するサービスを選択できます。
+
+```bash
+# 対話形式で選択（各サービスに y/N で回答）
+./install.sh
+
+# または CLI フラグで明示的に選択
+./install.sh --qdrant --postgres --ollama --flowise
+./install.sh --all
+
+# 上記と等価な docker compose 直接実行
+docker compose --profile qdrant --profile postgres up -d
 ```
 
 ## 使用方法
