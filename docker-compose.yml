@@ -1,15 +1,19 @@
 # docker-compose.yml
 #
-# Optional backing services for local/dev use. Each service is tagged with a
-# Compose profile of the same name so you can choose which ones to start from
-# the CLI instead of always starting everything:
+# Every service is tagged with a Compose profile of the same name so you can
+# choose which ones to start from the CLI instead of always starting
+# everything:
 #
-#   docker compose --profile qdrant --profile postgres up -d
+#   docker compose --profile qdrant --profile postgres --profile app up -d
 #
-# Or use ./install.sh for an interactive/flag-driven picker (./install.sh -h).
-# In production these typically run on dedicated hardware nodes instead (see
-# README "Hardware Requirements") - this file is for convenience, not the only
-# way to run them.
+# Or use ./install.sh (Linux/macOS/WSL) / ./install.ps1 (Windows) for an
+# interactive/flag-driven picker, e.g. `./install.sh --all` for a complete,
+# Docker-only setup - see README "Quick Start" for beginners.
+#
+# In production, qdrant/postgres/ollama typically run on dedicated hardware
+# nodes instead (see README "Hardware Requirements") - this file is for
+# convenience, not the only way to run them. "app" (orchestrator + webui) is
+# this project's own backend/frontend, built from the local Dockerfiles.
 
 services:
   qdrant:
@@ -82,6 +86,33 @@ services:
       - FLOWISE_API_KEY=${FLOWISE_API_KEY:-}
     volumes:
       - ~/.flowise:/root/.flowise
+
+  # The application itself (backend API + web UI). Together with
+  # qdrant/postgres/ollama above, `--profile app` (or install.sh/install.ps1
+  # --all) gives a complete, Docker-only setup - no local Python/Node needed.
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-orchestrator
+    restart: unless-stopped
+    profiles: ["app"]
+    env_file:
+      - .env
+    ports:
+      - "${SERVICE_PORT:-8000}:8000"
+
+  webui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-webui
+    restart: unless-stopped
+    profiles: ["app"]
+    depends_on:
+      - orchestrator
+    ports:
+      - "3000:80"
 
 volumes:
   qdrant_data:
