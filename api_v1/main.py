@@ -27,10 +27,18 @@ app = FastAPI(
 # instrumentator = Instrumentator()
 instrumentator = Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-# CORS 設定（必要な場合）
+# CORS 設定
+# CORS_ORIGINS: カンマ区切りのオリジンリスト（例: "https://app.example.com,https://admin.example.com"）
+# 未設定または "*" の場合は全オリジン許可（開発用デフォルト）。本番では必ず具体的なオリジンを設定してください。
+_cors_origins_env = os.getenv("CORS_ORIGINS", "*").strip()
+if _cors_origins_env in ("", "*"):
+    _cors_origins = ["*"]
+else:
+    _cors_origins = [origin.strip() for origin in _cors_origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番では制限を強化
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

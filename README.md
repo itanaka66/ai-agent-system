@@ -120,6 +120,7 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 | `OLLAMA_CPU_NODES` | CPU cluster nodes (comma-separated). Selectable as target `cpu_cluster` (round-robin) in Agent Console / Workflow Builder | ⚠️ Optional |
 | `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL connection | ✅ Yes |
 | `QDRANT_HOST` / `QDRANT_API_KEY` | Vector database URL / API key | ✅ Yes |
+| `CORS_ORIGINS` | Comma-separated allowed origins for the web UI. `*`/unset allows all (dev default) | ⚠️ Optional |
 | `QDRANT_COLLECTION_CORPUS/HISTORY` | Qdrant collection names | ⚠️ Optional |
 | `PROMETHEUS_URL` / `GRAFANA_URL` | Monitoring dashboards | ⚠️ Optional |
 | `FLOWISE_URL/FLOWISE_FLOW_ID/FLOWISE_API_KEY` | Flowise workflow integration | ⚠️ Optional |
@@ -236,6 +237,7 @@ npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへ
 | `OLLAMA_CPU_NODES` | CPU クラスターノード（カンマ区切り）。Agent Console / ワークフロービルダーで実行先「cpu_cluster」としてラウンドロビン選択可能 | ⚠️ 任意 |
 | `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL 接続情報 | ✅ 必要 |
 | `QDRANT_HOST` / `QDRANT_API_KEY` | ベクトルデータベースの URL / API キー | ✅ 必要 |
+| `CORS_ORIGINS` | Web UI からのアクセスを許可するオリジン（カンマ区切り）。`*` または未設定で全許可（開発用デフォルト） | ⚠️ 任意 |
 | `QDRANT_COLLECTION_CORPUS/HISTORY` | Qdrant コレクション名 | ⚠️ 任意 |
 | `PROMETHEUS_URL` / `GRAFANA_URL` | モニタリングダッシュボード | ⚠️ 任意 |
 | `FLOWISE_URL/FLOWISE_FLOW_ID/FLOWISE_API_KEY` | Flowise ワークフロー連携 | ⚠️ 任意 |
