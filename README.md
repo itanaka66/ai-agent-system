@@ -16,6 +16,45 @@
 
 ## 🌐 English
 
+### 🚀 Quick Start (Windows / macOS / Linux / Cloud)
+New here, or don't have the dedicated GPU hardware below? Try the whole system - backend, web UI, database, vector store, and a local LLM - with only Docker installed. No Python, Node.js, or GPU required.
+
+**1. Install Docker**
+| Platform | What to install |
+|----------|------------------|
+| Windows | [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/) (includes WSL2 + Compose) |
+| macOS | [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/) |
+| Linux | [Docker Engine + Compose plugin](https://docs.docker.com/engine/install/) |
+| Cloud (AWS/GCP/Azure/...) | Any Linux VM - follow the Linux instructions above |
+
+**2. Clone and run**
+```bash
+# macOS / Linux / Windows (via WSL or Git Bash)
+git clone https://github.com/itanaka66/ai-agent-system.git
+cd ai-agent-system
+./install.sh --all
+```
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/itanaka66/ai-agent-system.git
+cd ai-agent-system
+.\install.ps1 -All
+```
+
+**3. Pull a couple of small models** (one-time, ~5-8GB total, runs on CPU - no GPU needed)
+```bash
+docker compose exec ollama ollama pull llama3:8b
+docker compose exec ollama ollama pull phi3:mini
+```
+
+**4. Open the app**
+- Web UI (Agent Console): http://localhost:3000
+- API: http://localhost:8000
+
+Everything - agents, RAG memory, and logging - now runs in containers. Stop it all with `docker compose down`.
+
+This uses the small, CPU-friendly models in `.env.docker.example`. For the full RTX 3090 + Intel Arc A770 + CPU cluster production setup described below, see "Installation" instead.
+
 ### Overview
 This is an enterprise-grade AI agent system designed to leverage heterogeneous hardware resources:
 - **RTX 3090 (24GB VRAM):** Complex reasoning, debate generation, decision making
@@ -54,10 +93,12 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
 
 ```
 
-### Installation
+### Installation (Dedicated Hardware / Production)
+For the RTX 3090 + Intel Arc A770 + CPU cluster setup this project targets in production. New here? Use Quick Start above instead.
+
 ```bash
 # Clone repository
-git clone https://github.com/your-org/ai-agent-system.git
+git clone https://github.com/itanaka66/ai-agent-system.git
 cd ai-agent-system
 
 # Install dependencies
@@ -82,12 +123,14 @@ python main.py
 docker run -p 3001:8080 flowiseai/flowise
 ```
 
-### Optional: Run Qdrant / PostgreSQL / Ollama / Flowise via Docker
-If you don't already have these running on dedicated hardware, `docker-compose.yml` can start any combination of them locally. Each service is behind a Compose [profile](https://docs.docker.com/compose/how-tos/profiles/) of the same name, selectable from the CLI:
+### Optional: Run the app and/or Qdrant / PostgreSQL / Ollama / Flowise via Docker
+If you don't already have these running on dedicated hardware, `docker-compose.yml` can start any combination of them locally - including this app's own backend/web UI (see Quick Start above). Each service is behind a Compose [profile](https://docs.docker.com/compose/how-tos/profiles/) of the same name, selectable from the CLI:
 
 ```bash
-# Interactive picker (prompts y/N for each service)
+# Interactive picker (prompts y/N for each service) - Linux/macOS/WSL/Git Bash
 ./install.sh
+# Windows PowerShell
+.\install.ps1
 
 # Or select explicitly via flags
 ./install.sh --qdrant --postgres --ollama --flowise
@@ -126,6 +169,8 @@ Backed by new REST endpoints: `GET/POST/PUT/DELETE /api/v1/agents`, `GET /api/v1
 The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be used side-by-side.
 
 ## Environment Variables
+Two templates are provided: `.env.example` for the dedicated-hardware/production setup (defaults above), and `.env.docker.example` for the all-Docker Quick Start (points at container hostnames like `ollama`/`postgres`/`qdrant` and uses small CPU-friendly models). `install.sh`/`install.ps1` pick the right one automatically.
+
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 Ollama endpoint | ✅ Yes |
@@ -151,6 +196,46 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
 | Storage | NVMe SSD | NVMe SSD | NVMe SSD (200+ MB/s read) |
 
 # 🇯🇵 日本語
+
+## 🚀 クイックスタート（Windows / macOS / Linux / クラウド）
+初めての方、または下記の専用GPUハードウェアをお持ちでない方は、Dockerだけでシステム全体（バックエンド・Web UI・データベース・ベクトルストア・ローカルLLM）を試せます。Python・Node.js・GPUは不要です。
+
+**1. Docker をインストール**
+| プラットフォーム | インストールするもの |
+|----------|------------------|
+| Windows | [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)（WSL2・Compose 込み） |
+| macOS | [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/) |
+| Linux | [Docker Engine + Compose プラグイン](https://docs.docker.com/engine/install/) |
+| クラウド（AWS/GCP/Azure等） | 任意の Linux VM（上記 Linux の手順と同じ） |
+
+**2. クローンして起動**
+```bash
+# macOS / Linux / Windows（WSL または Git Bash）
+git clone https://github.com/itanaka66/ai-agent-system.git
+cd ai-agent-system
+./install.sh --all
+```
+```powershell
+# Windows（PowerShell）
+git clone https://github.com/itanaka66/ai-agent-system.git
+cd ai-agent-system
+.\install.ps1 -All
+```
+
+**3. 軽量モデルを取得**（初回のみ、合計約5〜8GB、GPU不要でCPUで動作）
+```bash
+docker compose exec ollama ollama pull llama3:8b
+docker compose exec ollama ollama pull phi3:mini
+```
+
+**4. アプリを開く**
+- Web UI（Agent Console）: http://localhost:3000
+- API: http://localhost:8000
+
+エージェント・RAGメモリ・ログ保存まで、すべてコンテナ上で動作しています。停止する場合は `docker compose down` を実行してください。
+
+このクイックスタートは `.env.docker.example` の軽量・CPU向けモデルを使用します。RTX 3090 + Intel Arc A770 + CPU クラスターによる本番構成は、下記の「インストール手順」を参照してください。
+
 ## 概要
 これは、多様なハードウェアリソースを活用するために設計されたエンタープライズグレードの AI エージェントシステムです：
 
@@ -189,10 +274,12 @@ The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be 
                     └─────────────┘     └─────────────┘
 ```
 
-## インストール手順
+## インストール手順（専用ハードウェア／本番構成）
+RTX 3090 + Intel Arc A770 + CPU クラスターによる本番構成向けです。初めての方は上記のクイックスタートをご利用ください。
+
 # リポジトリをクローン
 ``` bash
-git clone https://github.com/your-org/ai-agent-system.git
+git clone https://github.com/itanaka66/ai-agent-system.git
 cd ai-agent-system
 
 # 依存パッケージのインストール
@@ -217,12 +304,14 @@ python main.py
 docker run -p 3001:8080 flowiseai/flowise
 ```
 
-### オプション：Qdrant / PostgreSQL / Ollama / Flowise を Docker で起動
-専用ハードウェアで稼働させていない場合、`docker-compose.yml` でこれらをローカルに起動できます。各サービスは同名の Compose [プロファイル](https://docs.docker.com/compose/how-tos/profiles/) に紐づいており、CLI から起動するサービスを選択できます。
+### オプション：アプリ本体や Qdrant / PostgreSQL / Ollama / Flowise を Docker で起動
+専用ハードウェアで稼働させていない場合、`docker-compose.yml` でこれら（本アプリのバックエンド／Web UI を含む。上記クイックスタート参照）をローカルに起動できます。各サービスは同名の Compose [プロファイル](https://docs.docker.com/compose/how-tos/profiles/) に紐づいており、CLI から起動するサービスを選択できます。
 
 ```bash
-# 対話形式で選択（各サービスに y/N で回答）
+# 対話形式で選択（各サービスに y/N で回答）- Linux/macOS/WSL/Git Bash
 ./install.sh
+# Windows PowerShell
+.\install.ps1
 
 # または CLI フラグで明示的に選択
 ./install.sh --qdrant --postgres --ollama --flowise
@@ -258,6 +347,8 @@ npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへ
 これらは新規追加した REST API（`/api/v1/agents`、`/api/v1/agents/models`、`/api/v1/workflows`、`/api/v1/workflows/{name}/run`）に対応しています。既存の Flowise 連携（`FLOWISE_URL`）はそのまま併用可能です。
 
 ## 環境変数
+テンプレートは2種類あります：`.env.example`（専用ハードウェア／本番構成、上記の既定値）と `.env.docker.example`（全体をDockerで動かすクイックスタート向け。`ollama`/`postgres`/`qdrant` などコンテナのホスト名を指定し、軽量なCPU向けモデルを使用）。`install.sh`/`install.ps1` が自動的に適切な方を選びます。
+
 | 変数名 | 説明 | 必須 |
 |----------|-------------|----------|
 | `OLLAMA_MASTER_URL` | RTX 3090 の Ollama エンドポイント | ✅ 必要 |
