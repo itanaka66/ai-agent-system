@@ -8,12 +8,14 @@
 #
 # Or use ./install.sh (Linux/macOS/WSL) / ./install.ps1 (Windows) for an
 # interactive/flag-driven picker, e.g. `./install.sh --all` for a complete,
-# Docker-only setup - see README "Quick Start" for beginners.
+# Docker-only setup, or `./install.sh --webui` to run only the web UI - see
+# README "Quick Start" and "Installing just the Web UI" for details.
 #
 # In production, qdrant/postgres/ollama typically run on dedicated hardware
 # nodes instead (see README "Hardware Requirements") - this file is for
-# convenience, not the only way to run them. "app" (orchestrator + webui) is
-# this project's own backend/frontend, built from the local Dockerfiles.
+# convenience, not the only way to run them. "orchestrator" (backend API) and
+# "webui" (frontend) are this project's own code, built from the local
+# Dockerfiles; each can be started independently, or together via "app".
 
 services:
   qdrant:
@@ -87,16 +89,23 @@ services:
     volumes:
       - ~/.flowise:/root/.flowise
 
-  # The application itself (backend API + web UI). Together with
-  # qdrant/postgres/ollama above, `--profile app` (or install.sh/install.ps1
-  # --all) gives a complete, Docker-only setup - no local Python/Node needed.
+  # The application itself (backend API + web UI), each independently
+  # selectable ("orchestrator" / "webui") or together via "app". Together
+  # with qdrant/postgres/ollama above, `--profile app` (or install.sh/
+  # install.ps1 --all) gives a complete, Docker-only setup - no local
+  # Python/Node needed. `--profile webui` alone runs just the web UI (e.g. to
+  # try/build it without also running the backend); its nginx proxies /api
+  # to the "orchestrator" service by name, so API calls will fail until an
+  # orchestrator is reachable under that name - either the same compose
+  # project's own "orchestrator" service, or point elsewhere by editing
+  # frontend/nginx.conf's proxy_pass.
   orchestrator:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ai-orchestrator
     restart: unless-stopped
-    profiles: ["app"]
+    profiles: ["orchestrator", "app"]
     env_file:
       - .env
     ports:
@@ -108,9 +117,7 @@ services:
       dockerfile: Dockerfile
     container_name: ai-webui
     restart: unless-stopped
-    profiles: ["app"]
-    depends_on:
-      - orchestrator
+    profiles: ["webui", "app"]
     ports:
       - "3000:80"
 
