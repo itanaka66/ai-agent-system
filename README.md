@@ -147,7 +147,7 @@ docker run -p 3001:8080 flowiseai/flowise
 ```
 
 ### Optional: Run the app and/or Qdrant / PostgreSQL / Ollama / Flowise via Docker
-If you don't already have these running on dedicated hardware, `docker-compose.yml` can start any combination of them locally - including this app's own backend/web UI (see Quick Start above). Each service is behind a Compose [profile](https://docs.docker.com/compose/how-tos/profiles/) of the same name, selectable from the CLI:
+If you don't already have these running on dedicated hardware, `docker-compose.yml` can start any combination of them locally - including this app's own backend (`orchestrator`) and web UI (`webui`), independently or together (see Quick Start above). Each service is behind a Compose [profile](https://docs.docker.com/compose/how-tos/profiles/) of the same name, selectable from the CLI, on Linux, macOS, Windows, or any cloud VM:
 
 ```bash
 # Interactive picker (prompts y/N for each service) - Linux/macOS/WSL/Git Bash
@@ -157,11 +157,30 @@ If you don't already have these running on dedicated hardware, `docker-compose.y
 
 # Or select explicitly via flags
 ./install.sh --qdrant --postgres --ollama --flowise
+./install.sh --app          # this project's own backend + web UI together
 ./install.sh --all
 
 # Equivalent raw docker compose invocation
 docker compose --profile qdrant --profile postgres up -d
 ```
+
+#### Installing just the Web UI
+Want only the Agent Console web UI - e.g. to preview/build the frontend, or point it at a backend running elsewhere - without also starting the backend? Use `--webui` alone, on any platform:
+
+```bash
+# Linux / macOS / Windows (WSL or Git Bash)
+./install.sh --webui
+```
+```powershell
+# Windows (PowerShell)
+.\install.ps1 -WebUI
+```
+```bash
+# Equivalent raw docker compose invocation (any platform with Docker)
+docker compose --profile webui up -d --build
+```
+
+This builds and starts only the `webui` container (http://localhost:3000). Its nginx reverse-proxies `/api` to a service named `orchestrator` on the same Docker network - if you also want a working backend, either add `--orchestrator`/`-Orchestrator` (or just use `--app`/`-App` for both), or point `frontend/nginx.conf`'s `proxy_pass` at your own backend and rebuild the image. Without either, the UI loads but API calls (chat, agent settings, etc.) will fail.
 
 ## Usage
 
@@ -352,7 +371,7 @@ docker run -p 3001:8080 flowiseai/flowise
 ```
 
 ### オプション：アプリ本体や Qdrant / PostgreSQL / Ollama / Flowise を Docker で起動
-専用ハードウェアで稼働させていない場合、`docker-compose.yml` でこれら（本アプリのバックエンド／Web UI を含む。上記クイックスタート参照）をローカルに起動できます。各サービスは同名の Compose [プロファイル](https://docs.docker.com/compose/how-tos/profiles/) に紐づいており、CLI から起動するサービスを選択できます。
+専用ハードウェアで稼働させていない場合、`docker-compose.yml` でこれら（本アプリのバックエンド `orchestrator` と Web UI `webui` を個別に、または両方同時に起動可能。上記クイックスタート参照）をローカルに起動できます。各サービスは同名の Compose [プロファイル](https://docs.docker.com/compose/how-tos/profiles/) に紐づいており、Windows・macOS・Linux・クラウドVMのいずれでも CLI から起動するサービスを選択できます。
 
 ```bash
 # 対話形式で選択（各サービスに y/N で回答）- Linux/macOS/WSL/Git Bash
@@ -362,11 +381,30 @@ docker run -p 3001:8080 flowiseai/flowise
 
 # または CLI フラグで明示的に選択
 ./install.sh --qdrant --postgres --ollama --flowise
+./install.sh --app          # 本アプリのバックエンド＋Web UI をまとめて
 ./install.sh --all
 
 # 上記と等価な docker compose 直接実行
 docker compose --profile qdrant --profile postgres up -d
 ```
+
+#### Web UI だけをインストールする
+バックエンドは起動せず、Agent Console（Web UI）だけを試したい・ビルドしたい、あるいは別の場所で動いているバックエンドに接続したい場合は、`--webui` 単体をどのプラットフォームでも使えます。
+
+```bash
+# Linux / macOS / Windows（WSL または Git Bash）
+./install.sh --webui
+```
+```powershell
+# Windows（PowerShell）
+.\install.ps1 -WebUI
+```
+```bash
+# 上記と等価な docker compose 直接実行（Docker があればどのプラットフォームでも）
+docker compose --profile webui up -d --build
+```
+
+これは `webui` コンテナだけをビルド・起動します（http://localhost:3000）。内部の nginx は `/api` を同じ Docker ネットワーク上の `orchestrator` という名前のサービスへプロキシします。実際に動くバックエンドも必要な場合は `--orchestrator`／`-Orchestrator` を追加する（または両方まとめて `--app`／`-App` を使う）か、`frontend/nginx.conf` の `proxy_pass` を独自のバックエンドに向けてイメージを再ビルドしてください。どちらもない場合、UI 自体は表示されますがチャットやエージェント設定などの API 呼び出しは失敗します。
 
 ## 使用方法
 `POST /api/v1/chat` はクエリパラメータで引数を受け取ります（JSON ボディではありません）。
