@@ -3,11 +3,12 @@
   Select which Docker services to start for this project (Windows PowerShell).
 
 .DESCRIPTION
-  Picks which services to start - the app itself (backend + web UI) and/or
-  its optional backing services (Qdrant, PostgreSQL, Ollama, Flowise) - via
-  CLI switches or an interactive prompt, then starts them with
-  `docker compose` using matching Compose profiles. Requires Docker Desktop
-  (with the Compose plugin, included by default) to be installed and running.
+  Picks which services to start - this project's own backend and/or web UI
+  (independently selectable), and/or its optional backing services (Qdrant,
+  PostgreSQL, Ollama, Flowise) - via CLI switches or an interactive prompt,
+  then starts them with `docker compose` using matching Compose profiles.
+  Requires Docker Desktop (with the Compose plugin, included by default) to
+  be installed and running.
 
 .EXAMPLE
   .\install.ps1 -All
@@ -16,11 +17,17 @@
   .\install.ps1 -Qdrant -Postgres
 
 .EXAMPLE
+  .\install.ps1 -WebUI
+  # Just the web UI - see README "Installing just the Web UI".
+
+.EXAMPLE
   .\install.ps1
   # No switches: interactive yes/no prompt per service.
 #>
 [CmdletBinding()]
 param(
+    [switch]$Orchestrator,
+    [switch]$WebUI,
     [switch]$App,
     [switch]$Qdrant,
     [switch]$Postgres,
@@ -33,24 +40,27 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-$AllServices = @("app", "qdrant", "postgres", "ollama", "flowise")
+$AllServices = @("orchestrator", "webui", "qdrant", "postgres", "ollama", "flowise")
 
 function Show-Usage {
     Write-Host @"
-Usage: .\install.ps1 [-App] [-Qdrant] [-Postgres] [-Ollama] [-Flowise] [-All]
+Usage: .\install.ps1 [-Orchestrator] [-WebUI] [-App] [-Qdrant] [-Postgres] [-Ollama] [-Flowise] [-All]
 
 Selects which services to start via docker compose profiles. Run with no
 switches for an interactive yes/no prompt per service.
 
-  -App        This project's own backend API + web UI (built locally)
-  -Qdrant     Vector database (RAG / conversation memory)
-  -Postgres   PostgreSQL (chat/session logs)
-  -Ollama     Local Ollama server (LLM inference)
-  -Flowise    Flowise (visual workflow designer)
-  -All        Start every service above (recommended for a first try)
-  -Help       Show this help
+  -Orchestrator  This project's own backend API (built locally)
+  -WebUI         This project's own web UI / Agent Console (built locally)
+  -App           Shorthand for -Orchestrator -WebUI together
+  -Qdrant        Vector database (RAG / conversation memory)
+  -Postgres      PostgreSQL (chat/session logs)
+  -Ollama        Local Ollama server (LLM inference)
+  -Flowise       Flowise (visual workflow designer)
+  -All           Start every service above (recommended for a first try)
+  -Help          Show this help
 
 First time on Windows? Run: .\install.ps1 -All
+Only want the web UI (e.g. backend runs elsewhere)? Run: .\install.ps1 -WebUI
 "@
 }
 
@@ -59,7 +69,7 @@ if ($Help) {
     exit 0
 }
 
-$explicitSwitches = @($App, $Qdrant, $Postgres, $Ollama, $Flowise, $All) -contains $true
+$explicitSwitches = @($Orchestrator, $WebUI, $App, $Qdrant, $Postgres, $Ollama, $Flowise, $All) -contains $true
 $services = [System.Collections.Generic.List[string]]::new()
 
 if ($explicitSwitches) {
@@ -67,7 +77,9 @@ if ($explicitSwitches) {
         $services.AddRange([string[]]$AllServices)
     }
     else {
-        if ($App) { $services.Add("app") }
+        if ($App) { $services.Add("orchestrator"); $services.Add("webui") }
+        if ($Orchestrator) { $services.Add("orchestrator") }
+        if ($WebUI) { $services.Add("webui") }
         if ($Qdrant) { $services.Add("qdrant") }
         if ($Postgres) { $services.Add("postgres") }
         if ($Ollama) { $services.Add("ollama") }
@@ -89,8 +101,11 @@ if ($services.Count -eq 0) {
     exit 0
 }
 
+# De-duplicate (e.g. -App -WebUI would otherwise list "webui" twice)
+$services = [System.Collections.Generic.List[string]]($services | Select-Object -Unique)
+
 if (-not (Test-Path ".env")) {
-    if ($services.Contains("app") -and (Test-Path ".env.docker.example")) {
+    if (($services.Contains("orchestrator") -or $services.Contains("webui")) -and (Test-Path ".env.docker.example")) {
         Write-Host ".env が見つからないため .env.docker.example からコピーします / .env not found, copying from .env.docker.example"
         Copy-Item ".env.docker.example" ".env"
     }
@@ -123,8 +138,8 @@ if ($services.Contains("ollama")) {
     Write-Host "  docker compose exec ollama ollama pull phi3:mini"
 }
 
-if ($services.Contains("app")) {
+if ($services.Contains("webui") -or $services.Contains("orchestrator")) {
     Write-Host ""
-    Write-Host "Web UI: http://localhost:3000"
-    Write-Host "API:    http://localhost:8000"
+    if ($services.Contains("webui")) { Write-Host "Web UI: http://localhost:3000" }
+    if ($services.Contains("orchestrator")) { Write-Host "API:    http://localhost:8000" }
 }
