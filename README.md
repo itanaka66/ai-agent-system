@@ -180,7 +180,7 @@ Want only the Agent Console web UI - e.g. to preview/build the frontend, or poin
 docker compose --profile webui up -d --build
 ```
 
-This builds and starts only the `webui` container (http://localhost:3000). Its nginx reverse-proxies `/api` to a service named `orchestrator` on the same Docker network - if you also want a working backend, either add `--orchestrator`/`-Orchestrator` (or just use `--app`/`-App` for both), or point `frontend/nginx.conf`'s `proxy_pass` at your own backend and rebuild the image. Without either, the UI loads but API calls (chat, agent settings, etc.) will fail.
+This builds and starts only the `webui` container (http://localhost:3000). Its nginx reverse-proxies `/api` to `ORCHESTRATOR_HOST:ORCHESTRATOR_PORT` (defaults to the `orchestrator` service on the same Docker network, port 8000) - if you also want a working backend, either add `--orchestrator`/`-Orchestrator` (or just use `--app`/`-App` for both), or set `ORCHESTRATOR_HOST`/`ORCHESTRATOR_PORT` in `.env` to point at a backend running elsewhere - no image rebuild needed. Without a reachable backend, the UI still loads fine (nginx starts either way), but API calls (chat, agent settings, etc.) return `502 Bad Gateway`.
 
 ## Usage
 
@@ -404,7 +404,7 @@ docker compose --profile qdrant --profile postgres up -d
 docker compose --profile webui up -d --build
 ```
 
-これは `webui` コンテナだけをビルド・起動します（http://localhost:3000）。内部の nginx は `/api` を同じ Docker ネットワーク上の `orchestrator` という名前のサービスへプロキシします。実際に動くバックエンドも必要な場合は `--orchestrator`／`-Orchestrator` を追加する（または両方まとめて `--app`／`-App` を使う）か、`frontend/nginx.conf` の `proxy_pass` を独自のバックエンドに向けてイメージを再ビルドしてください。どちらもない場合、UI 自体は表示されますがチャットやエージェント設定などの API 呼び出しは失敗します。
+これは `webui` コンテナだけをビルド・起動します（http://localhost:3000）。内部の nginx は `/api` を `ORCHESTRATOR_HOST:ORCHESTRATOR_PORT`（既定値は同じ Docker ネットワーク上の `orchestrator` サービス、ポート8000）へプロキシします。実際に動くバックエンドも必要な場合は `--orchestrator`／`-Orchestrator` を追加する（または両方まとめて `--app`／`-App` を使う）か、`.env` で `ORCHESTRATOR_HOST`／`ORCHESTRATOR_PORT` を別のバックエンドに向けて設定してください（イメージの再ビルドは不要です）。バックエンドに到達できない場合でも UI 自体は表示されます（nginx はどちらにせよ起動します）が、チャットやエージェント設定などの API 呼び出しは `502 Bad Gateway` になります。
 
 ## 使用方法
 `POST /api/v1/chat` はクエリパラメータで引数を受け取ります（JSON ボディではありません）。

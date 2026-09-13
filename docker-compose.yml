@@ -95,10 +95,10 @@ services:
   # install.ps1 --all) gives a complete, Docker-only setup - no local
   # Python/Node needed. `--profile webui` alone runs just the web UI (e.g. to
   # try/build it without also running the backend); its nginx proxies /api
-  # to the "orchestrator" service by name, so API calls will fail until an
-  # orchestrator is reachable under that name - either the same compose
-  # project's own "orchestrator" service, or point elsewhere by editing
-  # frontend/nginx.conf's proxy_pass.
+  # to ORCHESTRATOR_HOST:ORCHESTRATOR_PORT (defaults below point at this
+  # project's own "orchestrator" service) - API calls fail until that's
+  # reachable, but nginx itself still starts fine either way (see
+  # frontend/nginx.conf.template for why that matters).
   orchestrator:
     build:
       context: .
@@ -118,6 +118,12 @@ services:
     container_name: ai-webui
     restart: unless-stopped
     profiles: ["webui", "app"]
+    environment:
+      # Backend the nginx inside this container proxies /api to. Defaults
+      # match the "orchestrator" service above; override in .env to point
+      # this container at a backend running elsewhere (e.g. `--webui` alone).
+      - ORCHESTRATOR_HOST=${ORCHESTRATOR_HOST:-orchestrator}
+      - ORCHESTRATOR_PORT=${ORCHESTRATOR_PORT:-8000}
     ports:
       - "3000:80"
 
