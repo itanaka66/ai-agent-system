@@ -19,6 +19,22 @@
 ### 🚀 Quick Start (Windows / macOS / Linux / Cloud)
 New here, or don't have the dedicated GPU hardware below? Try the whole system - backend, web UI, database, vector store, and a local LLM - with only Docker installed. No Python, Node.js, or GPU required.
 
+**⚠️ The Web UI isn't just a nice-to-have here - step 4 below is required.** The agents ship pre-configured for a 32B production model that this Quick Start never downloads (it's ~20GB and needs a GPU to run well), so `standard`/`debate` chat modes **will fail until you open the Web UI and repoint them** at the small models you actually pulled. The flow below shows where that step sits:
+
+```mermaid
+flowchart TD
+    A["1: Install Docker\n(Desktop on Win/Mac, Engine on Linux/Cloud)"] --> B["2: Clone repo &amp; run\n./install.sh --all  or  .\install.ps1 -All"]
+    B --> C["3: Pull small models\nllama3:8b, phi3:mini"]
+    C --> D{{"4: Open the Web UI\nhttp://localhost:3000"}}
+    D --> E["REQUIRED: Agent Console -&gt;\nrepoint each agent's model\nto llama3:8b / phi3:mini"]
+    E --> F(["System operational"])
+    F --> G["Chat via curl / REST API"]
+    F --> H["Optional: Workflow Builder -\ndesign custom agent pipelines"]
+
+    class D,E required
+    classDef required fill:#ffe4b3,stroke:#d97706,stroke-width:2px,color:#000
+```
+
 **1. Install Docker**
 | Platform | What to install |
 |----------|------------------|
@@ -47,13 +63,20 @@ docker compose exec ollama ollama pull llama3:8b
 docker compose exec ollama ollama pull phi3:mini
 ```
 
-**4. Open the app**
-- Web UI (Agent Console): http://localhost:3000
-- API: http://localhost:8000
+**4. Open the Web UI and point agents at your models (required)**
+1. Open http://localhost:3000 - this is the **Agent Console**, the app's own web UI (`frontend/`), already running as part of `--all`.
+2. Go to **エージェント設定 (Agent Settings)**.
+3. For every agent still showing `qwen2.5:32b` (the production default), change **モデル (Model)** to `llama3:8b` (or `phi3:mini` for lighter/faster ones) and save. Changes apply immediately - no restart needed.
+
+Skip this and only `mode=simple` chat requests will work; `standard`/`debate` will error with "model not found" until the agents point at models you've actually pulled.
+
+**5. Use it**
+- Chat via the API: see [Usage](#usage) below
+- Or keep using the Web UI to tweak prompts/temperature or build custom agent pipelines: see [Web UI](#web-ui-graphical-agent-customization) below
 
 Everything - agents, RAG memory, and logging - now runs in containers. Stop it all with `docker compose down`.
 
-This uses the small, CPU-friendly models in `.env.docker.example`. For the full RTX 3090 + Intel Arc A770 + CPU cluster production setup described below, see "Installation" instead.
+For the full RTX 3090 + Intel Arc A770 + CPU cluster production setup described below (which already ships model assignments that match its own defaults), see "Installation" instead.
 
 ### Overview
 This is an enterprise-grade AI agent system designed to leverage heterogeneous hardware resources:
@@ -69,7 +92,7 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
 | ⚠️ Loop Detection | History analysis prevents infinite conversation loops |
 | 📊 Monitoring | Prometheus + Grafana for system observability |
 | 🎨 Workflow Customization | Flowise integration for visual workflow design |
-| 🖥️ Agent Console | Built-in web UI (`frontend/`) to graphically edit agent prompts/models and build agent workflows, no file editing required |
+| 🖥️ Agent Console | Built-in web UI (`frontend/`) to graphically edit agent prompts/models and build agent workflows - **required after Quick Start** to match agents to the models you actually pulled, not just an optional extra |
 
 ### Architecture
 
@@ -153,8 +176,9 @@ curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&quer
 ```
 
 ## Web UI: Graphical Agent Customization
-A React SPA under `frontend/` lets you customize agents from the browser instead of editing files by hand.
+A React SPA under `frontend/` lets you customize agents from the browser instead of editing files by hand. **If you followed Quick Start, this isn't optional** - see step 4 there: the shipped agents default to a 32B model, so you need this UI (or the underlying `/api/v1/agents` REST API) to point them at whatever models you actually pulled.
 
+Already running via `--all`/Docker at http://localhost:3000. To run it separately for frontend development instead:
 ```bash
 cd frontend
 npm install
@@ -200,6 +224,22 @@ Two templates are provided: `.env.example` for the dedicated-hardware/production
 ## 🚀 クイックスタート（Windows / macOS / Linux / クラウド）
 初めての方、または下記の専用GPUハードウェアをお持ちでない方は、Dockerだけでシステム全体（バックエンド・Web UI・データベース・ベクトルストア・ローカルLLM）を試せます。Python・Node.js・GPUは不要です。
 
+**⚠️ Web UI はおまけではなく、下記の手順4は必須です。** エージェントは初期状態で32B（qwen2.5:32b）の本番用モデルを使うよう設定されていますが、このクイックスタートではそのモデルを取得しません（約20GBかつGPU推奨のため）。そのため **Web UI を開いて実際に取得したモデルに設定し直さない限り、`standard`/`debate` モードのチャットは失敗します**。全体の流れは以下の通りです：
+
+```mermaid
+flowchart TD
+    A["1: Docker をインストール\n（Windows/MacはDesktop、Linux/クラウドはEngine）"] --> B["2: クローンして起動\n./install.sh --all  または  .\install.ps1 -All"]
+    B --> C["3: 軽量モデルを取得\nllama3:8b, phi3:mini"]
+    C --> D{{"4: Web UI を開く\nhttp://localhost:3000"}}
+    D --> E["必須: エージェント設定画面で\n各エージェントのモデルを\nllama3:8b / phi3:mini に変更"]
+    E --> F(["運用開始"])
+    F --> G["curl / REST API でチャット"]
+    F --> H["任意: ワークフロービルダーで\nカスタムパイプラインを設計"]
+
+    class D,E required
+    classDef required fill:#ffe4b3,stroke:#d97706,stroke-width:2px,color:#000
+```
+
 **1. Docker をインストール**
 | プラットフォーム | インストールするもの |
 |----------|------------------|
@@ -228,13 +268,20 @@ docker compose exec ollama ollama pull llama3:8b
 docker compose exec ollama ollama pull phi3:mini
 ```
 
-**4. アプリを開く**
-- Web UI（Agent Console）: http://localhost:3000
-- API: http://localhost:8000
+**4. Web UI を開いてエージェントのモデルを設定（必須）**
+1. http://localhost:3000 を開く - これが本アプリ自身の Web UI である **Agent Console**（`frontend/`）で、`--all` の時点ですでに起動しています。
+2. **エージェント設定** に進む。
+3. `qwen2.5:32b`（本番用の既定値）のままになっている各エージェントについて、**モデル** を `llama3:8b`（軽量・高速にしたい場合は `phi3:mini`）に変更して保存する。変更は再起動不要で即座に反映されます。
+
+この手順を省略すると、`mode=simple` のチャットしか動作せず、`standard`/`debate` は「モデルが見つからない」エラーになります。
+
+**5. 使ってみる**
+- API 経由でチャット：下記の[使用方法](#使用方法)を参照
+- または Web UI でプロンプト・temperature を調整したり、カスタムなエージェントパイプラインを作成：下記の[Web UI](#web-uiエージェントのグラフィカルなカスタマイズ)を参照
 
 エージェント・RAGメモリ・ログ保存まで、すべてコンテナ上で動作しています。停止する場合は `docker compose down` を実行してください。
 
-このクイックスタートは `.env.docker.example` の軽量・CPU向けモデルを使用します。RTX 3090 + Intel Arc A770 + CPU クラスターによる本番構成は、下記の「インストール手順」を参照してください。
+RTX 3090 + Intel Arc A770 + CPU クラスターによる本番構成（自身の既定値と一致するモデル割り当て済み）は、下記の「インストール手順」を参照してください。
 
 ## 概要
 これは、多様なハードウェアリソースを活用するために設計されたエンタープライズグレードの AI エージェントシステムです：
@@ -251,7 +298,7 @@ docker compose exec ollama ollama pull phi3:mini
 | ⚠️ ループ検出 | 履歴分析により無限会話を防ぐ |
 | 📊 モニタリング | Prometheus + Grafana で可視化 |
 | 🎨 ワークフローカスタマイズ | Flowise 統合で視覚的デザイン可能 |
-| 🖥️ エージェントコンソール | 標準搭載の Web UI（`frontend/`）でエージェントのプロンプト・モデルやワークフローをファイル編集なしにグラフィカルに設定可能 |
+| 🖥️ エージェントコンソール | 標準搭載の Web UI（`frontend/`）でエージェントのプロンプト・モデルやワークフローをファイル編集なしにグラフィカルに設定可能 - **クイックスタート後は必須**（取得したモデルにエージェントを合わせるため）で、単なるおまけ機能ではない |
 
 ## アーキテクチャ
 
@@ -333,8 +380,9 @@ curl -X POST "http://localhost:8000/api/v1/chat?user_id=user123&session_id=&quer
 ```
 
 ## Web UI：エージェントのグラフィカルなカスタマイズ
-`frontend/` 以下に React 製の SPA があり、ブラウザからエージェントを設定できます。
+`frontend/` 以下に React 製の SPA があり、ブラウザからエージェントを設定できます。**クイックスタートに従った場合、これは任意ではありません** - 上記の手順4の通り、初期状態のエージェントは32Bモデルを前提としているため、実際に取得したモデルに合わせるにはこの画面（または裏側の `/api/v1/agents` REST API）が必要です。
 
+`--all`／Docker 経由ではすでに http://localhost:3000 で起動済みです。フロントエンド開発用に単独で起動する場合：
 ```bash
 cd frontend
 npm install
