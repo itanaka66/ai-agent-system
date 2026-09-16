@@ -12,6 +12,7 @@ import os
 from typing import Dict, List, Optional
 
 from services.ollama_client import OllamaClient
+from services.crawler_client import CrawlerClient
 from services import agent_config_store
 from services import node_pool
 from utils.logger import setup_logger
@@ -19,6 +20,8 @@ from utils.logger import setup_logger
 logger = setup_logger(__name__)
 
 RUNNABLE_TYPES = {"THINKER_AGENT", "VALIDATOR_AGENT", "EXECUTOR_AGENT"}
+CRAWLER_TYPES = {"CRAWLER_AGENT"}
+MAX_CRAWLER_OUTPUT_CHARS = 8000
 
 
 class WorkflowExecutionError(Exception):
@@ -68,6 +71,40 @@ def _node_settings(node: Dict) -> Dict:
     return settings
 
 
+async def _run_crawler_node(node: Dict, node_id: str, variables: Dict[str, str], required_inputs: List[str]) -> str:
+    """Fetch node['url'] (or the node's first input variable, treated as a
+    URL) and return extracted text/links/metadata as a single text blob."""
+
+    url = node.get("url") or (variables.get(required_inputs[0]) if required_inputs else None)
+    if not url:
+        raise WorkflowExecutionError(
+            f"Node '{node_id}' (CRAWLER_AGENT) needs a 'url' field or an input variable containing the URL"
+        )
+
+    client = CrawlerClient()
+    page = await client.fetch_page(url)
+
+    if page["status"] == "error" or (isinstance(page["status"], int) and page["status"] >= 400):
+        raise WorkflowExecutionError(
+            f"Node '{node_id}' failed to fetch '{url}': {page.get('error', page.get('status'))}"
+        )
+
+    html = page["content"]
+    mode = node.get("extract", "text")
+
+    if mode == "links":
+        result = client.extract_links(html, base_url=url)
+        output_text = "\n".join(f"{l['text']} -> {l['url']}" for l in result.get("links", []))
+    elif mode == "metadata":
+        result = client.extract_metadata(html)
+        output_text = "\n".join(f"{k}: {v}" for k, v in result.items() if v)
+    else:
+        result = client.extract_text(html, selector=node.get("selector", "body"))
+        output_text = "\n\n".join(result.get("texts", []))
+
+    return output_text[:MAX_CRAWLER_OUTPUT_CHARS]
+
+
 async def run_workflow(workflow: Dict, query: str) -> Dict:
     """Execute a workflow graph against a single user query, returning the
     final answer plus a per-node trace useful for debugging in the builder UI."""
@@ -108,6 +145,24 @@ async def run_workflow(workflow: Dict, query: str) -> Dict:
                     "node_id": node_id, "type": "END_NODE",
                     "output_preview": variables.get(final_var, "")[:200]
                 })
+                del pending[node_id]
+                progressed = True
+                continue
+
+            if node["type"] in CRAWLER_TYPES:
+                output_text = await _run_crawler_node(node, node_id, variables, required_inputs)
+
+                outputs = node.get("outputs", [])
+                if outputs:
+                    variables[outputs[0]["output"]] = output_text
+
+                trace.append({
+                    "node_id": node_id,
+                    "type": node["type"],
+                    "url": node.get("url") or variables.get(required_inputs[0] if required_inputs else "", ""),
+                    "output_preview": output_text[:200]
+                })
+
                 del pending[node_id]
                 progressed = True
                 continue

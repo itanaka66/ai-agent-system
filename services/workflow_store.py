@@ -15,7 +15,7 @@ WORKFLOW_DIR = Path(__file__).resolve().parent.parent / "configs" / "workflow_co
 
 _lock = threading.Lock()
 
-VALID_NODE_TYPES = {"START_NODE", "THINKER_AGENT", "VALIDATOR_AGENT", "EXECUTOR_AGENT", "END_NODE"}
+VALID_NODE_TYPES = {"START_NODE", "THINKER_AGENT", "VALIDATOR_AGENT", "EXECUTOR_AGENT", "CRAWLER_AGENT", "END_NODE"}
 _NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 

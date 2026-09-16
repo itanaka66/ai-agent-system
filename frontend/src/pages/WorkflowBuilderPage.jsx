@@ -5,18 +5,22 @@ import 'reactflow/dist/style.css'
 import { api } from '../api/client.js'
 
 const RUNNABLE_TYPES = ['THINKER_AGENT', 'VALIDATOR_AGENT', 'EXECUTOR_AGENT']
+const CRAWLER_TYPES = ['CRAWLER_AGENT']
+const ADDABLE_TYPES = [...RUNNABLE_TYPES, ...CRAWLER_TYPES]
 const TARGETS = ['gpu_master', 'gpu_worker', 'cpu_cluster']
 const TARGET_LABEL = {
   gpu_master: 'RTX 3090 (master)',
   gpu_worker: 'Intel Arc A770 (worker)',
   cpu_cluster: 'CPU クラスター',
 }
+const EXTRACT_MODES = ['text', 'links', 'metadata']
 
 const TYPE_COLOR = {
   START_NODE: '#2f9e5b',
   THINKER_AGENT: '#aa3bff',
   VALIDATOR_AGENT: '#e08a1e',
   EXECUTOR_AGENT: '#1e8fe0',
+  CRAWLER_AGENT: '#0ea472',
   END_NODE: '#6b7280',
 }
 
@@ -86,6 +90,9 @@ export default function WorkflowBuilderPage() {
             agentKey: n.agentKey,
             target: n.target,
             model: n.model,
+            url: n.url,
+            selector: n.selector,
+            extract: n.extract,
           }
         }
         setNodeData(dataMap)
@@ -182,6 +189,9 @@ export default function WorkflowBuilderPage() {
         if (nd.agentKey) node.agentKey = nd.agentKey
         if (nd.target) node.target = nd.target
         if (nd.model) node.model = nd.model
+        if (nd.url) node.url = nd.url
+        if (nd.selector) node.selector = nd.selector
+        if (nd.extract) node.extract = nd.extract
         return node
       })
       await api.saveWorkflow(name, { name, description, nodes: payloadNodes })
@@ -226,7 +236,7 @@ export default function WorkflowBuilderPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        {RUNNABLE_TYPES.map((t) => (
+        {ADDABLE_TYPES.map((t) => (
           <button key={t} className="btn" onClick={() => addNode(t)}>+ {t}</button>
         ))}
       </div>
@@ -259,7 +269,7 @@ export default function WorkflowBuilderPage() {
                     value={selectedNode.type}
                     onChange={(e) => patchNodeData(selectedNodeId, { type: e.target.value })}
                   >
-                    {RUNNABLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {ADDABLE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 )}
               </div>
@@ -323,6 +333,38 @@ export default function WorkflowBuilderPage() {
                       onChange={(e) => patchNodeData(selectedNodeId, { model: e.target.value || undefined })}
                       placeholder="例: llama3:8b（未指定時は継承元 or 既定値）"
                     />
+                  </div>
+                </>
+              )}
+
+              {CRAWLER_TYPES.includes(selectedNode.type) && (
+                <>
+                  <div className="field">
+                    <label>URL（未指定時は入力変数の値をURLとして使用）</label>
+                    <input
+                      value={selectedNode.url || ''}
+                      onChange={(e) => patchNodeData(selectedNodeId, { url: e.target.value || undefined })}
+                      placeholder="https://example.com/ または未指定で入力変数から取得"
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label>CSS セレクタ（抽出モードが「本文テキスト」の場合）</label>
+                    <input
+                      value={selectedNode.selector || ''}
+                      onChange={(e) => patchNodeData(selectedNodeId, { selector: e.target.value || undefined })}
+                      placeholder="body（既定値）"
+                    />
+                  </div>
+
+                  <div className="field">
+                    <label>抽出モード</label>
+                    <select
+                      value={selectedNode.extract || 'text'}
+                      onChange={(e) => patchNodeData(selectedNodeId, { extract: e.target.value })}
+                    >
+                      {EXTRACT_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
                   </div>
                 </>
               )}

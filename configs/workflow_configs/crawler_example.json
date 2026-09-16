@@ -1,0 +1,35 @@
+{
+    "name": "Crawler + Summarize",
+    "description": "Fetches a web page and asks the thinker agent to summarize the extracted article text.",
+    "nodes": [
+        {
+            "id": "start_node",
+            "type": "START_NODE",
+            "position": [20, 100],
+            "outputs": [{"output": "url"}]
+        },
+        {
+            "id": "crawl_page",
+            "type": "CRAWLER_AGENT",
+            "position": [300, 100],
+            "selector": "article, main, body",
+            "extract": "text",
+            "inputs": [{"input": "url"}],
+            "outputs": [{"output": "page_text"}]
+        },
+        {
+            "id": "summarize",
+            "type": "THINKER_AGENT",
+            "position": [600, 100],
+            "systemPrompt": "あなたは要約の専門家です。以下のウェブページ本文を、日本語で3〜5個の箇条書きに要約してください。",
+            "inputs": [{"input": "page_text"}],
+            "outputs": [{"output": "summary"}]
+        },
+        {
+            "id": "end_node",
+            "type": "END_NODE",
+            "position": [900, 100],
+            "inputs": [{"input": "summary"}]
+        }
+    ]
+}
