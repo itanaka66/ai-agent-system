@@ -93,6 +93,7 @@ This is an enterprise-grade AI agent system designed to leverage heterogeneous h
 | 📊 Monitoring | Prometheus + Grafana for system observability |
 | 🎨 Workflow Customization | Flowise integration for visual workflow design |
 | 🖥️ Agent Console | Built-in web UI (`frontend/`) to graphically edit agent prompts/models and build agent workflows - **required after Quick Start** to match agents to the models you actually pulled, not just an optional extra |
+| 🕸️ Web Crawler | Fetch a URL and pull its text/links/metadata into an agent pipeline, via a `CRAWLER_AGENT` workflow node or the standalone `/api/v1/crawler/fetch` API |
 
 ### Architecture
 
@@ -205,11 +206,18 @@ npm run dev   # http://localhost:5173 (proxies /api to the backend on :8000)
 ```
 
 - **エージェント設定 (Agent Settings)** — edit each pipeline stage's model, system prompt, temperature and max tokens. Changes apply to the next `/api/v1/chat` request immediately (no restart).
-- **ワークフロービルダー (Workflow Builder)** — drag agent nodes onto a canvas, wire them together via named input/output variables, and test-run the graph. Workflows are stored as `configs/workflow_configs/*.json`.
+- **ワークフロービルダー (Workflow Builder)** — drag agent nodes onto a canvas, wire them together via named input/output variables, and test-run the graph. Workflows are stored as `configs/workflow_configs/*.json`. Includes a `CRAWLER_AGENT` node type - see "Web Crawler" below.
 
 Backed by new REST endpoints: `GET/POST/PUT/DELETE /api/v1/agents`, `GET /api/v1/agents/models`, and `GET/PUT/DELETE /api/v1/workflows`, `POST /api/v1/workflows/{name}/run`.
 
 The existing Flowise integration (`FLOWISE_URL`) is unaffected and can still be used side-by-side.
+
+## Web Crawler
+Pulls a web page into an agent pipeline: fetches a URL and extracts its text, links, and metadata (`services/crawler_client.py`, using `aiohttp` + `BeautifulSoup`).
+
+- **Standalone API**: `POST /api/v1/crawler/fetch` with `{"url": "...", "selector": "body"}` returns extracted `text`/`links`/`metadata` in one call - handy for testing a page before wiring it into a workflow.
+- **Workflow node**: add a `CRAWLER_AGENT` node in the Workflow Builder. It reads its URL either from a fixed `url` field on the node, or from an input variable produced by an earlier node (e.g. `START_NODE`'s output, so you can pass the URL as the chat query). Optional fields: `selector` (CSS selector, default `body`) and `extract` (`text` | `links` | `metadata`, default `text`). See `configs/workflow_configs/crawler_example.json` for a working `START → CRAWLER_AGENT → THINKER_AGENT → END` pipeline that crawls a page and asks the thinker agent to summarize it - open it in the Workflow Builder and try "Test Run" with a URL as the query.
+- A crawl failure (unreachable host, HTTP 4xx/5xx) raises like any other node failure - it doesn't silently produce empty output.
 
 ## Environment Variables
 Two templates are provided: `.env.example` for the dedicated-hardware/production setup (defaults above), and `.env.docker.example` for the all-Docker Quick Start (points at container hostnames like `ollama`/`postgres`/`qdrant` and uses small CPU-friendly models). `install.sh`/`install.ps1` pick the right one automatically.
@@ -318,6 +326,7 @@ RTX 3090 + Intel Arc A770 + CPU クラスターによる本番構成（自身の
 | 📊 モニタリング | Prometheus + Grafana で可視化 |
 | 🎨 ワークフローカスタマイズ | Flowise 統合で視覚的デザイン可能 |
 | 🖥️ エージェントコンソール | 標準搭載の Web UI（`frontend/`）でエージェントのプロンプト・モデルやワークフローをファイル編集なしにグラフィカルに設定可能 - **クイックスタート後は必須**（取得したモデルにエージェントを合わせるため）で、単なるおまけ機能ではない |
+| 🕸️ Web クローラー | URLを取得しテキスト・リンク・メタデータをエージェントパイプラインに取り込み可能。`CRAWLER_AGENT` ワークフローノード、または単体API `/api/v1/crawler/fetch` から利用 |
 
 ## アーキテクチャ
 
@@ -428,9 +437,16 @@ npm run dev   # http://localhost:5173 （/api を :8000 のバックエンドへ
 ```
 
 - **エージェント設定** — 各パイプライン段階（提案／批評／判定／検証／標準応答／高速実行）のモデル・システムプロンプト・temperature・max_tokens を編集できます。保存すると再起動なしで次回のチャットリクエストから反映されます。
-- **ワークフロービルダー** — キャンバス上にエージェントノードをドラッグ配置し、入出力変数名でデータフローを設計、テスト実行できます。ワークフローは `configs/workflow_configs/*.json` に保存されます。
+- **ワークフロービルダー** — キャンバス上にエージェントノードをドラッグ配置し、入出力変数名でデータフローを設計、テスト実行できます。ワークフローは `configs/workflow_configs/*.json` に保存されます。`CRAWLER_AGENT` ノードタイプも利用可能です（下記「Web クローラー」参照）。
 
 これらは新規追加した REST API（`/api/v1/agents`、`/api/v1/agents/models`、`/api/v1/workflows`、`/api/v1/workflows/{name}/run`）に対応しています。既存の Flowise 連携（`FLOWISE_URL`）はそのまま併用可能です。
+
+## Web クローラー
+Webページをエージェントパイプラインに取り込む機能です：URLを取得し、テキスト・リンク・メタデータを抽出します（`services/crawler_client.py`、`aiohttp` + `BeautifulSoup` 使用）。
+
+- **単体API**: `POST /api/v1/crawler/fetch` に `{"url": "...", "selector": "body"}` を送ると、`text`／`links`／`metadata` を一度に取得できます。ワークフローに組み込む前のテストに便利です。
+- **ワークフローノード**: ワークフロービルダーで `CRAWLER_AGENT` ノードを追加します。URLはノード自身の固定 `url` フィールド、または前段のノード（例: `START_NODE` の出力）から渡される入力変数のいずれかから取得します（チャットのクエリ欄にURLを渡す使い方も可能）。任意項目として `selector`（CSSセレクタ、既定値 `body`）、`extract`（`text`／`links`／`metadata`、既定値 `text`）があります。実際に動作する `START → CRAWLER_AGENT → THINKER_AGENT → END` の例は `configs/workflow_configs/crawler_example.json` を参照してください。ワークフロービルダーで開き、URLをクエリとして「テスト実行」してみてください。
+- クロール失敗（接続不可・HTTP 4xx/5xx）は他のノードと同様にエラーとして扱われます。空の出力を黙って返すことはありません。
 
 ## 環境変数
 テンプレートは2種類あります：`.env.example`（専用ハードウェア／本番構成、上記の既定値）と `.env.docker.example`（全体をDockerで動かすクイックスタート向け。`ollama`/`postgres`/`qdrant` などコンテナのホスト名を指定し、軽量なCPU向けモデルを使用）。`install.sh`/`install.ps1` が自動的に適切な方を選びます。
