@@ -3,6 +3,7 @@
 <div align="center">
 
 [![CI](https://github.com/itanaka66/ai-agent-system/actions/workflows/ci.yml/badge.svg)](https://github.com/itanaka66/ai-agent-system/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 **A Multi-Agent AI System with RTX 3090 + Intel Arc A770 + CPU Cluster**
 
@@ -495,7 +496,11 @@ logs/errors.log エラーログ/Error log
 ```
 問題が発生したチャット ID Chat session ID where issue occurred
 📝 ライセンス / License
-MIT License - 自由に利用・改変可能/Free to use and modify under MIT terms.
+GNU General Public License v3.0 (GPLv3) - 詳細は [LICENSE](LICENSE) を参照してください。
+Copyright (C) 2026 agNedia Inc. / 株式会社エージーネディア
+
+GNU General Public License v3.0 (GPLv3) - see [LICENSE](LICENSE) for the full text.
+Copyright (C) 2026 agNedia Inc. / 株式会社エージーネディア
 
 <div align="center">
 
