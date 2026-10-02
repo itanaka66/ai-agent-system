@@ -33,12 +33,18 @@ def _client_for_target(target: str) -> OllamaClient:
         node_url = node_pool.next_cpu_node()
         if not node_url:
             raise WorkflowExecutionError("target 'cpu_cluster' requested but OLLAMA_CPU_NODES is not configured")
-        return OllamaClient(node_url)
+        return OllamaClient(node_url, api_key=os.getenv("OLLAMA_CPU_API_KEY"))
 
-    url = os.getenv("OLLAMA_WORKER_URL") if target == "gpu_worker" else os.getenv("OLLAMA_MASTER_URL")
+    if target == "gpu_worker":
+        url = os.getenv("OLLAMA_WORKER_URL")
+        api_key = os.getenv("OLLAMA_WORKER_API_KEY")
+    else:
+        url = os.getenv("OLLAMA_MASTER_URL")
+        api_key = os.getenv("OLLAMA_MASTER_API_KEY")
+
     if not url:
         raise WorkflowExecutionError(f"No Ollama endpoint configured for target '{target}'")
-    return OllamaClient(url)
+    return OllamaClient(url, api_key=api_key)
 
 
 def _node_settings(node: Dict) -> Dict:

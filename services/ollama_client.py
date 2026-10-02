@@ -11,14 +11,23 @@ DEFAULT_REPEAT_PENALTY = 1.1
 DEFAULT_TEMPERATURE = 0.7
 
 class OllamaClient:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, api_key: Optional[str] = None):
         self.base_url = base_url.rstrip('/')
+        # Vanilla Ollama has no built-in auth, but many deployments sit behind
+        # a reverse proxy / hosted gateway that requires a bearer token - set
+        # OLLAMA_*_API_KEY to send one, or leave unset for a plain LAN server.
+        self.api_key = api_key
 
     def _is_rtx3090(self) -> bool:
         """True when this client targets OLLAMA_MASTER_URL (the RTX 3090)."""
 
         master_url = os.getenv("OLLAMA_MASTER_URL", "").rstrip('/')
         return bool(master_url) and self.base_url == master_url
+
+    def _headers(self) -> dict:
+        if self.api_key:
+            return {"Authorization": f"Bearer {self.api_key}"}
+        return {}
 
     async def generate(self, model: str, prompt: str, max_tokens: int = 4096, temperature: Optional[float] = None) -> str:
         """Generate response from Ollama"""
@@ -40,18 +49,19 @@ class OllamaClient:
                 "repeat_penalty": DEFAULT_REPEAT_PENALTY,
             }
         # else: no "options" key - Ollama's own defaults apply on this node
-        
+
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
+                headers=self._headers(),
                 timeout=120  # CPU nodes may be slower
             )
-            
+
             if response.status_code == 200:
                 return response.json().get("response", "")
             else:
                 raise Exception(f"Ollama error: {response.status_code}")
-                
+
         except requests.exceptions.Timeout:
             raise Exception(f"Ollama timeout at {self.base_url}")
