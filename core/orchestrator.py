@@ -28,8 +28,8 @@ class Orchestrator:
         """Initialize orchestrator with all service connections"""
         
         # Ollama Clients
-        self.ollama_master = OllamaClient(os.getenv("OLLAMA_MASTER_URL"))
-        self.ollama_worker = OllamaClient(os.getenv("OLLAMA_WORKER_URL"))
+        self.ollama_master = OllamaClient(os.getenv("OLLAMA_MASTER_URL"), api_key=os.getenv("OLLAMA_MASTER_API_KEY"))
+        self.ollama_worker = OllamaClient(os.getenv("OLLAMA_WORKER_URL"), api_key=os.getenv("OLLAMA_WORKER_API_KEY"))
         
         # Service Handlers
         self.qdrant = QdrantHandler()
@@ -213,7 +213,7 @@ class Orchestrator:
         if target == "cpu_cluster":
             node_url = node_pool.next_cpu_node()
             if node_url:
-                return OllamaClient(node_url)
+                return OllamaClient(node_url, api_key=os.getenv("OLLAMA_CPU_API_KEY"))
             logger.warning("target 'cpu_cluster' requested but OLLAMA_CPU_NODES is not configured; falling back to gpu_worker")
             return self.ollama_worker
 

@@ -230,6 +230,7 @@ Two templates are provided: `.env.example` for the dedicated-hardware/production
 | `MODEL_GPT_THINKER` | Default model for thinker/debate stages (RTX 3090) | ✅ Yes |
 | `MODEL_FAST_EXECUTOR` | Default model for validator/executor stages (Arc A770) | ✅ Yes |
 | `OLLAMA_CPU_NODES` | CPU cluster nodes (comma-separated). Selectable as target `cpu_cluster` (round-robin) in Agent Console / Workflow Builder | ⚠️ Optional |
+| `OLLAMA_MASTER_API_KEY` / `OLLAMA_WORKER_API_KEY` / `OLLAMA_CPU_API_KEY` | Bearer token sent as `Authorization: Bearer <key>` to the matching Ollama endpoint. Vanilla Ollama has no built-in auth; set these only if that node sits behind a reverse proxy / hosted gateway that requires one | ⚠️ Optional |
 | `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL connection | ✅ Yes |
 | `QDRANT_HOST` / `QDRANT_API_KEY` | Vector database URL / API key | ✅ Yes |
 | `CORS_ORIGINS` | Comma-separated allowed origins for the web UI. `*`/unset allows all (dev default) | ⚠️ Optional |
@@ -459,6 +460,7 @@ Webページをエージェントパイプラインに取り込む機能です�
 | `MODEL_GPT_THINKER` | Thinker/ディベート段階の既定モデル（RTX 3090） | ✅ 必要 |
 | `MODEL_FAST_EXECUTOR` | Validator/Executor 段階の既定モデル（Arc A770） | ✅ 必要 |
 | `OLLAMA_CPU_NODES` | CPU クラスターノード（カンマ区切り）。Agent Console / ワークフロービルダーで実行先「cpu_cluster」としてラウンドロビン選択可能 | ⚠️ 任意 |
+| `OLLAMA_MASTER_API_KEY` / `OLLAMA_WORKER_API_KEY` / `OLLAMA_CPU_API_KEY` | 対応する Ollama エンドポイントに `Authorization: Bearer <key>` として送信するトークン。素の Ollama には認証機能がないため、リバースプロキシ／ホスト型ゲートウェイ経由でトークンが必要な場合のみ設定してください | ⚠️ 任意 |
 | `POSTGRES_HOST/PORT/USER/PASSWORD/DB` | PostgreSQL 接続情報 | ✅ 必要 |
 | `QDRANT_HOST` / `QDRANT_API_KEY` | ベクトルデータベースの URL / API キー | ✅ 必要 |
 | `CORS_ORIGINS` | Web UI からのアクセスを許可するオリジン（カンマ区切り）。`*` または未設定で全許可（開発用デフォルト） | ⚠️ 任意 |

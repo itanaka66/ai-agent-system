@@ -3,6 +3,7 @@ Thinker Agent (RTX 3090)
 Handles complex reasoning, debate generation, and decision making
 """
 
+import os
 from typing import Dict, List, Optional
 from utils.logger import setup_logger
 

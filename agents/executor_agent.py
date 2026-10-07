@@ -1,3 +1,36 @@
+#!/usr/bin/env python3
+"""
+Executor Agent (Intel Arc A770 / CPU Cluster)
+Handles fast response generation, sandboxed code execution, and
+ComfyUI-triggered image generation.
+"""
+
+import os
+import random
+from typing import Dict, List, Optional
+from utils.logger import setup_logger
+
+logger = setup_logger(__name__)
+
+
+class ExecutorAgent:
+    """高速応答・コード実行・画像生成を担当するエージェント"""
+
+    def __init__(self):
+        self.ollama_url = os.getenv("OLLAMA_WORKER_URL") or os.getenv("OLLAMA_MASTER_URL")
+
+        # CPU クラスターがあればそちらを優先
+        cpu_nodes_str = os.getenv("OLLAMA_CPU_NODES", "")
+        self.cpu_nodes = [n.strip() for n in cpu_nodes_str.split(",") if n.strip()]
+
+        # 実行用モデル
+        self.model_name = os.getenv("MODEL_FAST_EXECUTOR", "llama3:8b")
+        self.model_cpu_lighter = os.getenv("MODEL_CPU_LIGHTER", "phi3:mini")
+
+        # ComfyUI（画像生成）
+        self.comfyui_host = os.getenv("COMFYUI_HOST", "http://localhost")
+        self.comfyui_port = os.getenv("COMFYUI_PORT", "8188")
+
     async def generate_response(self, query: str, context: List[Dict] = None) -> str:
         """
         高速応答を生成
