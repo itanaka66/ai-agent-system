@@ -219,7 +219,7 @@ class Orchestrator:
 
         return self.ollama_worker if target == "gpu_worker" else self.ollama_master
 
-    async def _run_stage(self, key: str, dynamic_prompt: str) -> str:
+    async def _run_stage(self, key: str, dynamic_prompt: str, session_id: Optional[str] = None) -> str:
         """Run one pipeline stage using its configurable system prompt + model."""
 
         settings = self._agent_settings(key)
@@ -230,7 +230,8 @@ class Orchestrator:
             model=settings["model"],
             prompt=full_prompt,
             max_tokens=settings["max_tokens"],
-            temperature=settings["temperature"]
+            temperature=settings["temperature"],
+            job_label=f"chat:{session_id or 'unknown'} [{key}]"
         )
 
     async def _debate_flow(self, query: str, session_id: str) -> Dict:
@@ -244,23 +245,26 @@ class Orchestrator:
         # Debater A: Generate Proposal (RTX 3090 - Thinker)
         proposal = await self._run_stage(
             "thinker_proposal",
-            f"Context from knowledge base: {context_text}\n\nUser Query: {query}"
+            f"Context from knowledge base: {context_text}\n\nUser Query: {query}",
+            session_id=session_id
         )
 
         # Debater B: Critique Proposal (RTX 3090 - Thinker)
         critique = await self._run_stage(
             "thinker_critique",
-            f"Original Query: {query}\nProposal: {proposal[:2000]}"
+            f"Original Query: {query}\nProposal: {proposal[:2000]}",
+            session_id=session_id
         )
 
         # Judge: Final Decision (RTX 3090 - Thinker)
         final_answer = await self._run_stage(
             "judge_decision",
-            f"Query: {query}\nProposal: {proposal[:2000]}\nCritique: {critique[:2000]}"
+            f"Query: {query}\nProposal: {proposal[:2000]}\nCritique: {critique[:2000]}",
+            session_id=session_id
         )
 
         # Validate with lightweight agent (Arc A770)
-        validation = await self._validate_response(final_answer, query)
+        validation = await self._validate_response(final_answer, query, session_id=session_id)
 
         return {
             "answer": final_answer,
@@ -278,11 +282,12 @@ class Orchestrator:
 
         answer = await self._run_stage(
             "standard_answer",
-            f"Context from knowledge base: {context}\n\nUser Query: {query}"
+            f"Context from knowledge base: {context}\n\nUser Query: {query}",
+            session_id=session_id
         )
 
         # Validate with lightweight agent
-        validation = await self._validate_response(answer, query)
+        validation = await self._validate_response(answer, query, session_id=session_id)
 
         return {
             "answer": answer,
@@ -294,7 +299,7 @@ class Orchestrator:
     async def _simple_query(self, query: str, session_id: str) -> Dict:
         """Simple quick response without RAG"""
 
-        answer = await self._run_stage("executor_simple", f"Query: {query}")
+        answer = await self._run_stage("executor_simple", f"Query: {query}", session_id=session_id)
 
         return {
             "answer": answer,
@@ -309,7 +314,8 @@ class Orchestrator:
         model: str,
         prompt: str,
         max_tokens: int = 4096,
-        temperature: Optional[float] = None
+        temperature: Optional[float] = None,
+        job_label: Optional[str] = None
     ) -> str:
         """Unified model calling with error handling"""
 
@@ -318,7 +324,9 @@ class Orchestrator:
                 model=model,
                 prompt=prompt,
                 max_tokens=max_tokens,
-                temperature=temperature
+                temperature=temperature,
+                job_type="chat",
+                job_label=job_label
             )
 
             if isinstance(response, dict):
@@ -329,12 +337,13 @@ class Orchestrator:
             logger.error(f"Model call failed: {e}")
             raise
 
-    async def _validate_response(self, answer: str, query: str) -> Dict:
+    async def _validate_response(self, answer: str, query: str, session_id: Optional[str] = None) -> Dict:
         """Validate AI response for hallucination"""
 
         result = await self._run_stage(
             "validator",
-            f"Original Query: {query}\nAI Answer: {answer}"
+            f"Original Query: {query}\nAI Answer: {answer}",
+            session_id=session_id
         )
 
         # Try to parse JSON response

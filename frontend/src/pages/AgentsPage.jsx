@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client.js'
 import NodeStatus from '../components/NodeStatus.jsx'
+import QueueStatus from '../components/QueueStatus.jsx'
 
 const ROLES = ['thinker', 'validator', 'executor']
 const TARGETS = ['gpu_master', 'gpu_worker', 'cpu_cluster']
@@ -117,6 +118,7 @@ export default function AgentsPage() {
       {message && <div className="banner-success">{message}</div>}
 
       <NodeStatus />
+      <QueueStatus />
 
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginTop: 16 }}>
         <div style={{ flex: '0 0 280px' }}>
