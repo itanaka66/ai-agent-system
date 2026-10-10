@@ -1,5 +1,8 @@
+import asyncio
 import os, requests
 from typing import Optional
+
+from services import llm_queue
 
 # Fixed defaults sent only to the RTX 3090 (OLLAMA_MASTER_URL). Every other
 # node (Intel Arc A770 / CPU cluster) gets no "options" override at all -
@@ -29,7 +32,15 @@ class OllamaClient:
             return {"Authorization": f"Bearer {self.api_key}"}
         return {}
 
-    async def generate(self, model: str, prompt: str, max_tokens: int = 4096, temperature: Optional[float] = None) -> str:
+    async def generate(
+        self,
+        model: str,
+        prompt: str,
+        max_tokens: int = 4096,
+        temperature: Optional[float] = None,
+        job_type: str = "llm",
+        job_label: Optional[str] = None,
+    ) -> str:
         """Generate response from Ollama"""
 
         payload = {
@@ -50,18 +61,25 @@ class OllamaClient:
             }
         # else: no "options" key - Ollama's own defaults apply on this node
 
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json=payload,
-                headers=self._headers(),
-                timeout=120  # CPU nodes may be slower
-            )
+        async with llm_queue.track(self.base_url, model, job_type, job_label or model):
+            try:
+                # requests.post() is blocking - run it off the event loop thread so
+                # other in-flight LLM calls (e.g. a different node) aren't frozen
+                # for the duration of this one, and the queue reflects reality.
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: requests.post(
+                        f"{self.base_url}/api/generate",
+                        json=payload,
+                        headers=self._headers(),
+                        timeout=120  # CPU nodes may be slower
+                    )
+                )
 
-            if response.status_code == 200:
-                return response.json().get("response", "")
-            else:
-                raise Exception(f"Ollama error: {response.status_code}")
+                if response.status_code == 200:
+                    return response.json().get("response", "")
+                else:
+                    raise Exception(f"Ollama error: {response.status_code}")
 
-        except requests.exceptions.Timeout:
-            raise Exception(f"Ollama timeout at {self.base_url}")
+            except requests.exceptions.Timeout:
+                raise Exception(f"Ollama timeout at {self.base_url}")

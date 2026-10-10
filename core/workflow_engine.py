@@ -115,6 +115,7 @@ async def run_workflow(workflow: Dict, query: str) -> Dict:
     """Execute a workflow graph against a single user query, returning the
     final answer plus a per-node trace useful for debugging in the builder UI."""
 
+    workflow_name = workflow.get("name", "workflow")
     nodes = {n["id"]: n for n in workflow.get("nodes", [])}
     if not nodes:
         raise WorkflowExecutionError("Workflow has no nodes")
@@ -186,7 +187,9 @@ async def run_workflow(workflow: Dict, query: str) -> Dict:
                     model=settings["model"],
                     prompt=prompt,
                     max_tokens=settings["max_tokens"],
-                    temperature=settings["temperature"]
+                    temperature=settings["temperature"],
+                    job_type="workflow",
+                    job_label=f"workflow:{workflow_name} [{node_id}]"
                 )
             except Exception as e:
                 raise WorkflowExecutionError(f"Node '{node_id}' failed: {e}")

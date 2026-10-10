@@ -35,4 +35,7 @@ export const api = {
 
   // Nodes
   listNodes: () => request('/nodes'),
+
+  // Queue
+  listQueue: () => request('/queue'),
 }

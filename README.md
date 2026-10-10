@@ -220,6 +220,14 @@ Pulls a web page into an agent pipeline: fetches a URL and extracts its text, li
 - **Workflow node**: add a `CRAWLER_AGENT` node in the Workflow Builder. It reads its URL either from a fixed `url` field on the node, or from an input variable produced by an earlier node (e.g. `START_NODE`'s output, so you can pass the URL as the chat query). Optional fields: `selector` (CSS selector, default `body`) and `extract` (`text` | `links` | `metadata`, default `text`). See `configs/workflow_configs/crawler_example.json` for a working `START → CRAWLER_AGENT → THINKER_AGENT → END` pipeline that crawls a page and asks the thinker agent to summarize it - open it in the Workflow Builder and try "Test Run" with a URL as the query.
 - A crawl failure (unreachable host, HTTP 4xx/5xx) raises like any other node failure - it doesn't silently produce empty output.
 
+## LLM Queue Status
+Shows what's currently queued/running against the Ollama nodes - both chat requests and workflow runs - live in the Agent Console next to "ノード状態" (Node Status). Backed by `GET /api/v1/queue`.
+
+- Every call to `OllamaClient.generate()` (chat pipeline and workflow node execution alike) is tracked from the moment it's submitted until it finishes.
+- Each Ollama node URL processes one call at a time by default (`OLLAMA_NODE_CONCURRENCY`, default `1`) - matching how a single GPU/CPU server actually works - so extra calls to the same node visibly sit "queued" instead of the list always looking empty.
+- Progress is an elapsed-time estimate, not real token-level progress (Ollama's non-streaming API doesn't report that): `elapsed / rolling average duration for that node+model`, capped below 100% until the call actually completes.
+- Finished jobs stay visible for a few seconds, then drop off the list automatically.
+
 ## Environment Variables
 Two templates are provided: `.env.example` for the dedicated-hardware/production setup (defaults above), and `.env.docker.example` for the all-Docker Quick Start (points at container hostnames like `ollama`/`postgres`/`qdrant` and uses small CPU-friendly models). `install.sh`/`install.ps1` pick the right one automatically.
 
@@ -240,6 +248,8 @@ Two templates are provided: `.env.example` for the dedicated-hardware/production
 | `SERVICE_HOST` / `SERVICE_PORT` | Orchestrator bind address/port (default `0.0.0.0:8000`) | ⚠️ Optional |
 | `SECRET_KEY` / `API_TOKEN` | App secret / API auth token | ✅ Yes |
 | `LOG_LEVEL` | Logging verbosity | ⚠️ Optional |
+| `OLLAMA_NODE_CONCURRENCY` | Max concurrent `/api/generate` calls per Ollama node URL before extra calls show as "queued" in the LLM Queue Status panel (default `1`) | ⚠️ Optional |
+| `LLM_QUEUE_DEFAULT_ESTIMATE_SECONDS` | Fallback progress-bar duration estimate (seconds) for a node+model with no completed calls yet (default `20`) | ⚠️ Optional |
 
 ## Hardware Requirements
 | Component | RTX 3090 | Intel Arc A770 | CPU Node (per) |
@@ -450,6 +460,14 @@ Webページをエージェントパイプラインに取り込む機能です�
 - **ワークフローノード**: ワークフロービルダーで `CRAWLER_AGENT` ノードを追加します。URLはノード自身の固定 `url` フィールド、または前段のノード（例: `START_NODE` の出力）から渡される入力変数のいずれかから取得します（チャットのクエリ欄にURLを渡す使い方も可能）。任意項目として `selector`（CSSセレクタ、既定値 `body`）、`extract`（`text`／`links`／`metadata`、既定値 `text`）があります。実際に動作する `START → CRAWLER_AGENT → THINKER_AGENT → END` の例は `configs/workflow_configs/crawler_example.json` を参照してください。ワークフロービルダーで開き、URLをクエリとして「テスト実行」してみてください。
 - クロール失敗（接続不可・HTTP 4xx/5xx）は他のノードと同様にエラーとして扱われます。空の出力を黙って返すことはありません。
 
+## LLM 処理キュー
+Agent Console の「ノード状態」パネルの近くに、Ollamaノードに対して現在キュー待ち／処理中のリクエスト（チャット・ワークフロー実行の両方）をリアルタイムに表示します。裏側のAPIは `GET /api/v1/queue` です。
+
+- `OllamaClient.generate()` へのすべての呼び出し（チャットパイプライン・ワークフローノード実行の両方）を、送信された瞬間から完了するまで追跡します。
+- 各Ollamaノード（URL単位）はデフォルトで同時に1リクエストしか処理しません（`OLLAMA_NODE_CONCURRENCY`、既定値 `1`）。実際のGPU/CPUサーバーが一度に1件ずつ処理する挙動に合わせたもので、同じノードへの追加リクエストは「待機中」として可視化されます。
+- プログレスバーの進捗は経過時間ベースの推定値です（Ollamaの非ストリーミングAPIはトークン単位の実進捗を返さないため）：「経過時間 ÷ そのノード・モデルの直近平均応答時間」。実際に完了するまでは100%未満に抑えられます。
+- 完了したジョブは数秒間だけ一覧に残り、その後自動的に消えます。
+
 ## 環境変数
 テンプレートは2種類あります：`.env.example`（専用ハードウェア／本番構成、上記の既定値）と `.env.docker.example`（全体をDockerで動かすクイックスタート向け。`ollama`/`postgres`/`qdrant` などコンテナのホスト名を指定し、軽量なCPU向けモデルを使用）。`install.sh`/`install.ps1` が自動的に適切な方を選びます。
 
@@ -470,6 +488,8 @@ Webページをエージェントパイプラインに取り込む機能です�
 | `SERVICE_HOST` / `SERVICE_PORT` | オーケストレーターの待受アドレス/ポート（既定 `0.0.0.0:8000`） | ⚠️ 任意 |
 | `SECRET_KEY` / `API_TOKEN` | アプリシークレット / API 認証トークン | ✅ 必要 |
 | `LOG_LEVEL` | ログ出力レベル | ⚠️ 任意 |
+| `OLLAMA_NODE_CONCURRENCY` | Ollamaノード（URL単位）あたりの `/api/generate` 同時実行数の上限。超過分は LLM処理キューで「待機中」と表示されます（既定値 `1`） | ⚠️ 任意 |
+| `LLM_QUEUE_DEFAULT_ESTIMATE_SECONDS` | まだ実績のないノード・モデル組み合わせに使うプログレスバーの初期推定秒数（既定値 `20`） | ⚠️ 任意 |
 
 ## ハードウェア要件
 | コンポーネント | RTX 3090 | Intel Arc A770 | CPU ノード（1 台あたり） |
